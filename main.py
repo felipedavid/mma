@@ -8,6 +8,8 @@ import re
 type_r = {"ADD":0, "AND":4, "NAND":1, "NOR":7, "OR":5, "SLT":2, "SUB":3}
 type_i = {"ADDI":8, "BEQ":4, "LW":3, "SW":0xa}
 
+labels = []
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: ./assembler program.m")
@@ -22,8 +24,8 @@ def main():
         machine_i = ""
 
         print("{0:#0{1}x}".format(addr,6), " ", end='')
-        #print(i.strip(), "-> ", end="")
-        print(tok, "-> ", end="")
+        print(i.strip(), "-> ", end="")
+        #print(tok, "-> ", end="")
         if iname in type_r.keys():
             print(encode_r_instruction(tok, iname))
         elif iname in type_i:
@@ -49,12 +51,24 @@ def encode_r_instruction(tokens: list, iname: str) -> str:
     return '0x' + format(int(bin_instruction, 2), '04x')
     
 def encode_i_instruction(tokens: list, iname: str) -> str:
-    return "0x0000"
+    opc = bin_string(type_i[iname], 4)
+
+    if iname == "BEQ":
+        rt = bin_string(tokens[2][1], 3)
+        rs = bin_string(tokens[1][1], 3)
+        immd = bin_string(int(tokens[3].strip(), 0), 6)
+    else:
+        rt = bin_string(tokens[1][1], 3)
+        rs = bin_string(tokens[2].split("$", 1)[1][0], 3)
+        immd = bin_string(tokens[2].split("$", 1)[0].replace("(", ""), 6)
+
+    bin_instruction = opc + rs + rt + immd
+    return '0x' + format(int(bin_instruction, 2), '04x')
 
 def encode_j_instruction(tokens: list) -> str:
     opc = bin_string(2, 4)
-    immediate = bin_string(int(tokens[1].strip(), 0), 12)
-    bin_instruction = opc + immediate
+    immd = bin_string(int(tokens[1].strip(), 0), 12)
+    bin_instruction = opc + immd
     return '0x' + format(int(bin_instruction, 2), '04x')
 
 if __name__ == "__main__":
