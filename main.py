@@ -15,27 +15,33 @@ def main():
         print("Usage: ./assembler program.m")
         return
 
-    f = open(sys.argv[1], "r")
-    
+    as_file = open(sys.argv[1], "r")
+    bi_file = open("a.out", "w")
+
+    ibuffer = ["v2.0 raw\n"]
+
     addr = 0
-    for i in f:
+    for i in as_file:
         tok = list(filter(None, re.split(",| ", i)))
         iname = tok[0].upper()
         machine_i = ""
 
-        print("{0:#0{1}x}".format(addr,6), " ", end='')
-        print(i.strip(), "-> ", end="")
+        #print("{0:#0{1}x}".format(addr,6), " ", end='')
+        #print(i.strip(), "-> ", end="")
         #print(tok, "-> ", end="")
         if iname in type_r.keys():
-            print(encode_r_instruction(tok, iname))
+            ibuffer.append(encode_r_instruction(tok, iname) + '\n')
         elif iname in type_i:
-            print(encode_i_instruction(tok, iname))
+            ibuffer.append(encode_i_instruction(tok, iname) + '\n')
         elif iname == "J":
-            print(encode_j_instruction(tok))
+            ibuffer.append(encode_j_instruction(tok) + '\n')
         else:
             printf("ERROR:" + iname + "is not a valid instruction.\n")
             return
         addr += 2
+    
+    for i in ibuffer:
+        bi_file.write(i)
 
 def bin_string(value: int, padding: int) -> str:
     return format(int(value), '0'+str(padding)+'b')
@@ -48,7 +54,7 @@ def encode_r_instruction(tokens: list, iname: str) -> str:
     funct = bin_string(type_r[iname], 3)
 
     bin_instruction = opc + rs + rt + rd + funct
-    return '0x' + format(int(bin_instruction, 2), '04x')
+    return format(int(bin_instruction, 2), '04x')
     
 def encode_i_instruction(tokens: list, iname: str) -> str:
     opc = bin_string(type_i[iname], 4)
@@ -63,13 +69,13 @@ def encode_i_instruction(tokens: list, iname: str) -> str:
         immd = bin_string(tokens[2].split("$", 1)[0].replace("(", ""), 6)
 
     bin_instruction = opc + rs + rt + immd
-    return '0x' + format(int(bin_instruction, 2), '04x')
+    return format(int(bin_instruction, 2), '04x')
 
 def encode_j_instruction(tokens: list) -> str:
     opc = bin_string(2, 4)
     immd = bin_string(int(tokens[1].strip(), 0), 12)
     bin_instruction = opc + immd
-    return '0x' + format(int(bin_instruction, 2), '04x')
+    return format(int(bin_instruction, 2), '04x')
 
 if __name__ == "__main__":
     main()
