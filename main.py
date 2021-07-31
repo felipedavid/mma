@@ -26,9 +26,7 @@ def main():
         iname = tok[0].upper()
         machine_i = ""
 
-        #print("{0:#0{1}x}".format(addr,6), " ", end='')
-        #print(i.strip(), "-> ", end="")
-        #print(tok, "-> ", end="")
+        print(tok)
         if iname in type_r.keys():
             ibuffer.append(encode_r_instruction(tok, iname) + '\n')
         elif iname in type_i:

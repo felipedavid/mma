@@ -65,10 +65,20 @@ def encode_r_instruction(tokens: list, iname: str, addr: int) -> int:
     return mi;
 
 def encode_i_instruction(tokens: list, iname: str, addr: int) -> int:
-    return type_i[iname]
+    rt = int(tokens[1][1])
+    rs = int(tokens[2].split("$", 1)[1][0])
+    immd = int(tokens[2].split("$", 1)[0].replace("(", ""))
+
+    mi = type_i[iname]
+
+    mi |= (rs << 9)
+    mi |= (rt << 6)
+    mi |= immd
+
+    return mi
 
 def encode_j_instruction(tokens: list, addr:int) -> int:
-
+    pass
 
 if __name__ == "__main__":
     main()
