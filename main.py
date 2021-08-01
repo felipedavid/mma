@@ -12,12 +12,15 @@ type_r = {
     "SLT":  0x0002, 
     "SUB":  0x0003,
 }
+
 type_i = {
     "ADDI": 0x8000, 
     "BEQ":  0x4000, 
     "LW":   0x3000, 
     "SW":   0xa000,
 }
+
+labels = {}
 
 def main():
     if len(sys.argv) != 2:
@@ -32,14 +35,18 @@ def main():
     addr = 0
     for i in as_file:
         tok = list(filter(None, re.split(",| ", i)))
+        tok[-1] = tok[-1].strip()
         iname = tok[0].upper()
 
-        if iname in type_r:
+        if len(tok) == 1 and tok[0][-1] == ':':
+            tok[0] = tok[0].replace(":", "")
+            labels[tok[0]] = addr + 2
+        elif iname in type_r:
             ibuffer.append(encode_r_instruction(tok, iname, addr))
         elif iname in type_i:
             ibuffer.append(encode_i_instruction(tok, iname, addr))
         elif iname == "J":
-            ibuffer.append(0x2000 | int(tok[1].strip(), 0))
+            ibuffer.append(encode_j_instruction(tok, iname, addr))
 
         addr += 2
 
@@ -82,6 +89,14 @@ def encode_i_instruction(tokens: list, iname: str, addr: int) -> int:
     mi |= immd
 
     return mi
+
+
+def encode_j_instruction(tokens: list, iname: str, addr: int) -> int:
+    if (tokens[1][0].isalpha()):
+        tokens[1] = labels[tokens[1]]
+    else:
+        tokens[1] = tokens[1].strip()
+    return 0x2000 | tokens[1]
 
 if __name__ == "__main__":
     main()
