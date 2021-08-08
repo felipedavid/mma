@@ -14,7 +14,6 @@ type AssemblyFile struct {
 
 type RInstruction struct {
     lit string
-    op    int
     rs    int
     rt    int
     rd    int
@@ -22,14 +21,12 @@ type RInstruction struct {
 }
 
 func (r *RInstruction) BinaryString() string {
-    binn := 0x0000
-    binn |= r.op << 12
-    binn |= r.rs << 9
-    binn |= r.rt << 6
-    binn |= r.rd << 3
-    binn |= r.funct
-
-    return fmt.Sprintf("%x", binn)
+    bin := 0x0000
+    bin |= r.rs << 9
+    bin |= r.rt << 6
+    bin |= r.rd << 3
+    bin |= r.funct
+    return fmt.Sprintf("%04x", bin)
 }
 
 type IInstruction struct {
@@ -41,11 +38,21 @@ type IInstruction struct {
 }
 
 func (i *IInstruction) BinaryString() string {
-    binn := 0x0000;
-    binn |= i.op << 12
-    binn |= i.rs << 9
-    binn |= i.rt << 6
-    binn |= i.immd
+    bin := 0x0000
+    bin |= i.op << 12
+    bin |= i.rs << 9
+    bin |= i.rt << 6
+    bin |= i.immd
+    return fmt.Sprintf("%04x", bin)
+}
 
-    return fmt.Sprintf("%x", binn)
+type JInstruction struct {
+    lit string
+    addr int
+}
+
+func (j *JInstruction) BinaryString() string {
+    bin := 0x2000
+    bin |= j.addr
+    return fmt.Sprintf("%04x", bin)
 }
