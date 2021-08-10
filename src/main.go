@@ -21,11 +21,13 @@ func main() {
     assemblyFile := p.Parse()
 
     var b bytes.Buffer
-    for _, i := range assemblyFile.Instructions {
-        fmt.Println(i.BinaryString())
-        b.WriteString(i.BinaryString())
+    for n, i := range assemblyFile.Instructions {
+        if n == 0 {
+            b.WriteString("v2.0 raw\n")
+        }
+        b.WriteString(i.BinaryString() + "\n")
     }
 
-    binFilePath := strings.Replace(asmFilePath, ".m", ".i", 1)
+    binFilePath := strings.Replace(asmFilePath, ".m", ".ins", 1)
     ioutil.WriteFile(binFilePath, b.Bytes(), 0644)
 }

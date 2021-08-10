@@ -49,7 +49,8 @@ func (s *Scanner) scanComment() string {
 func (s *Scanner) Scan() (tok Token, lit string) {
     s.skipWhitespace()
     ch := s.ch
-    s.next() // always make progress
+    ch_str := string(ch)
+    s.next()
 
     switch ch {
     case -1:
@@ -58,38 +59,38 @@ func (s *Scanner) Scan() (tok Token, lit string) {
     case '/':
         if s.ch == '/' {
             tok = COMMENT
-            lit = s.scanComment()
+            lit = ch_str + s.scanComment()
         }
     case 'j':
         if s.ch == ' ' {
             tok = J_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         }
     case 'l':
         if s.ch == 'w' {
             tok = I_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         }
     case 's':
         if s.ch == 'w' {
             tok = I_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         } else if s.ch == 'u' || s.ch == 'l' {
             tok = R_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         }
     case 'a':
         if (s.ch == 'n' || s.ch == 'd') && s.src[s.offset+1] == 'd' {
             tok = R_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         } else if s.ch == 'd' && s.src[s.offset+1] == 'd' && s.src[s.offset+2] == 'i' {
             tok = I_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         }
     case 'b':
         if s.ch == 'e' && s.src[s.offset+1] == 'q' {
             tok = I_INSTRUCTION
-            lit = s.scanLine()
+            lit = ch_str + s.scanLine()
         }
     case '(':
 		tok = LABEL

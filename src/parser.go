@@ -54,22 +54,151 @@ loop:
 }
 
 func (p *Parser) parseRInstruction(r *RInstruction) {
-    r.rs = 1
-    r.rt = 2
-    r.rd = 3
-    r.funct = 5
+    no_commas := strings.ReplaceAll(r.lit, ",", " ")
+    lits := strings.Fields(no_commas)
+
+    // Parsing funct
+    switch lits[0] {
+        case "add":
+            r.funct = 0
+        case "and":
+            r.funct = 4
+        case "nand":
+            r.funct = 1
+        case "nor":
+            r.funct = 7
+        case "or":
+            r.funct = 5
+        case "slt":
+            r.funct = 2
+        case "sub":
+            r.funct = 3
+        default:
+            fmt.Println("Invalid instruction:", lits[0])
+            os.Exit(1)
+    }
+
+    // Parsing registers
+    var reg_i int
+    for n, reg := range lits[1:] {
+        if reg[0] == '$' {
+            if val, ok := p.symbols[reg[1:]]; ok {
+                reg_i = val
+            } else {
+                reg_n, err := strconv.Atoi(reg[1:])
+                if err != nil {
+                    fmt.Println("Invalid register:", reg)
+                    os.Exit(1)
+                }
+                reg_i = reg_n
+            }
+
+            switch n {
+            case 0:
+                r.rd = reg_i
+            case 1:
+                r.rs = reg_i
+            case 2:
+                r.rt = reg_i
+            }
+        }
+    }
 }
 
 func (p *Parser) parseIInstruction(i *IInstruction) {
-    i.rs = 3
-    i.rt = 0
-    i.immd = 4
+    clean_lit := strings.ReplaceAll(i.lit, ",", " ")
+    clean_lit = strings.ReplaceAll(clean_lit, "(", " ")
+    clean_lit = strings.ReplaceAll(clean_lit, ")", " ")
+    lits := strings.Fields(clean_lit)
+    fmt.Println(lits)
+
+    switch lits[0] {
+        case "addi":
+            i.op = 8
+        case "beq":
+            i.op = 4
+        case "lw":
+            i.op = 3
+        case "sw":
+            i.op = 10
+        default:
+            fmt.Println("Invalid instruction:", lits[0])
+            os.Exit(1)
+    }
+
+    if i.op == 3 || i.op == 10 { // if "lw" or "sw"
+        var reg_i int
+        for n, field := range lits[1:4] {
+            if field[0] == '$' {
+                if val, ok := p.symbols[field[1:]]; ok {
+                    reg_i = val
+                } else {
+                    reg_n, err := strconv.Atoi(field[1:])
+                    if err != nil {
+                        fmt.Println("Invalid register:", field)
+                        os.Exit(1)
+                    }
+                    reg_i = reg_n
+                }
+
+                switch n {
+                case 0:
+                    i.rt = reg_i
+                case 2:
+                    i.rs = reg_i
+                }
+            } else if n == 1 {
+                immd, err := strconv.Atoi(field)
+                if err != nil {
+                    fmt.Println("Invalid immediate:", immd)
+                    os.Exit(1)
+                }
+                i.immd = immd
+            }
+        }
+    } else if i.op == 8 || i.op == 4 { // if "addi" or "beq"
+        var reg_i int
+        for n, field := range lits[1:4] {
+            if field[0] == '$' {
+                if val, ok := p.symbols[field[1:]]; ok {
+                    reg_i = val
+                } else {
+                    reg_n, err := strconv.Atoi(field[1:])
+                    if err != nil {
+                        fmt.Println("Invalid register:", field)
+                        os.Exit(1)
+                    }
+                    reg_i = reg_n
+                }
+
+                switch n {
+                case 0:
+                    i.rs = reg_i
+                case 1:
+                    i.rt = reg_i
+                }
+            } else if n == 2 {
+                immd, err := strconv.Atoi(field[:])
+                if err != nil {
+                    fmt.Println("Invalid immediate:", field[:])
+                    fmt.Println("Only valid immediates are base 10 integers.:")
+                    os.Exit(1)
+                }
+                i.immd = immd
+            }
+        }
+    } else {
+        fmt.Println("Invalid I Instruction:", lits[0])
+        os.Exit(1)
+    }
 }
 
 func (p *Parser) parseJInstruction(j *JInstruction) {
-    label := strings.Fields(j.lit)[0]
+    fmt.Println(p.symbols)
+    fmt.Println(j.lit)
+    label := strings.Fields(j.lit)[1]
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
-        j.addr = val
+        j.addr = val * 2
     } else {
         addr, err := strconv.Atoi(label)
         if err != nil {
