@@ -11,6 +11,7 @@ type Parser struct {
     scanner Scanner
     symbols map[string]int
     instructions []Instruction
+    dataStream []DataInterface
     nAddr int
 }
 
@@ -22,21 +23,48 @@ func (p *Parser) Init(src []byte) {
     }
 }
 
-func (p *Parser) Parse() AssemblyFile {
+const (
+    INSTRUCTION = 0
+    DATA = 1
+)
+
+func (p *Parser) Parse() (DataFile, AssemblyFile) {
+    ins_or_data := INSTRUCTION
 loop:
     for {
         tok, lit := p.scanner.Scan()
-        switch tok {
-        case EOF:
-            break loop
-        case LABEL:
+        if (lit == ".data") {
+            ins_or_data = DATA
             p.symbols[lit] = len(p.instructions)
-        case R_INSTRUCTION:
-            p.instructions = append(p.instructions, &RInstruction{lit: lit})
-        case I_INSTRUCTION:
-            p.instructions = append(p.instructions, &IInstruction{lit: lit})
-        case J_INSTRUCTION:
-            p.instructions = append(p.instructions, &JInstruction{lit: lit})
+            continue
+        } else if lit == ".text" {
+            ins_or_data = INSTRUCTION
+            p.symbols[lit] = len(p.instructions)
+            continue
+        }
+
+        if ins_or_data == INSTRUCTION {
+            switch tok {
+            case EOF:
+                break loop
+            case LABEL:
+                p.symbols[lit] = len(p.instructions)
+            case R_INSTRUCTION:
+                p.instructions = append(p.instructions, &RInstruction{lit: lit})
+            case I_INSTRUCTION:
+                p.instructions = append(p.instructions, &IInstruction{lit: lit})
+            case J_INSTRUCTION:
+                p.instructions = append(p.instructions, &JInstruction{lit: lit})
+            }
+        } else if ins_or_data == DATA {
+            p.dataStream = append(p.dataStream, &Data{lit: lit})
+        }
+    }
+
+    for _, dat := range p.dataStream {
+        switch d := dat.(type) {
+        case *Data:
+            p.parseData(d)
         }
     }
 
@@ -50,7 +78,11 @@ loop:
             p.parseJInstruction(i)
         }
     }
-    return AssemblyFile{ Instructions: p.instructions }
+    return DataFile{DataStream: p.dataStream}, AssemblyFile{ Instructions: p.instructions }
+}
+
+func (p *Parser) parseData(d *Data) {
+    d.byte_data = 0x0000
 }
 
 func (p *Parser) parseRInstruction(r *RInstruction) {
@@ -79,18 +111,18 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
     }
 
     // Parsing registers
-    var reg_i int
+    var reg_i uint16
     for n, reg := range lits[1:] {
         if reg[0] == '$' {
             if val, ok := p.symbols[reg[1:]]; ok {
-                reg_i = val
+                reg_i = uint16(val)
             } else {
                 reg_n, err := strconv.Atoi(reg[1:])
                 if err != nil {
                     fmt.Println("Invalid register:", reg)
                     os.Exit(1)
                 }
-                reg_i = reg_n
+                reg_i = uint16(reg_n)
             }
 
             switch n {
@@ -127,18 +159,18 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
     }
 
     if i.op == 3 || i.op == 10 { // if "lw" or "sw"
-        var reg_i int
+        var reg_i uint16
         for n, field := range lits[1:4] {
             if field[0] == '$' {
                 if val, ok := p.symbols[field[1:]]; ok {
-                    reg_i = val
+                    reg_i = uint16(val)
                 } else {
                     reg_n, err := strconv.Atoi(field[1:])
                     if err != nil {
                         fmt.Println("Invalid register:", field)
                         os.Exit(1)
                     }
-                    reg_i = reg_n
+                    reg_i = uint16(reg_n)
                 }
 
                 switch n {
@@ -153,22 +185,22 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
                     fmt.Println("Invalid immediate:", immd)
                     os.Exit(1)
                 }
-                i.immd = immd
+                i.immd = uint16(immd)
             }
         }
     } else if i.op == 8 || i.op == 4 { // if "addi" or "beq"
-        var reg_i int
+        var reg_i uint16
         for n, field := range lits[1:4] {
             if field[0] == '$' {
                 if val, ok := p.symbols[field[1:]]; ok {
-                    reg_i = val
+                    reg_i = uint16(val)
                 } else {
                     reg_n, err := strconv.Atoi(field[1:])
                     if err != nil {
                         fmt.Println("Invalid register:", field)
                         os.Exit(1)
                     }
-                    reg_i = reg_n
+                    reg_i = uint16(reg_n)
                 }
 
                 switch n {
@@ -184,7 +216,7 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
                     fmt.Println("Only valid immediates are base 10 integers.:")
                     os.Exit(1)
                 }
-                i.immd = immd
+                i.immd = uint16(immd)
             }
         }
     } else {
@@ -198,13 +230,13 @@ func (p *Parser) parseJInstruction(j *JInstruction) {
     fmt.Println(j.lit)
     label := strings.Fields(j.lit)[1]
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
-        j.addr = val * 2
+        j.addr = uint16(val * 2)
     } else {
         addr, err := strconv.Atoi(label)
         if err != nil {
             fmt.Printf("Label \"%v\" dosen't exist.\n", label)
             os.Exit(1)
         }
-        j.addr = addr
+        j.addr = uint16(addr)
     }
 }

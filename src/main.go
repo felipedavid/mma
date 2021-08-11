@@ -18,7 +18,15 @@ func main() {
 
     var p Parser
     p.Init(asmData)
-    assemblyFile := p.Parse()
+    dataFile, assemblyFile := p.Parse()
+
+    var d bytes.Buffer
+    for n, i := range dataFile.DataStream {
+        if n == 0 {
+            d.WriteString("v2.0 raw\n")
+        }
+        d.WriteString(i.BinaryString() + "\n")
+    }
 
     var b bytes.Buffer
     for n, i := range assemblyFile.Instructions {
@@ -28,6 +36,9 @@ func main() {
         b.WriteString(i.BinaryString() + "\n")
     }
 
+    datFilePath := strings.Replace(asmFilePath, ".m", ".dat", 1)
     binFilePath := strings.Replace(asmFilePath, ".m", ".ins", 1)
+
+    ioutil.WriteFile(datFilePath, d.Bytes(), 0644)
     ioutil.WriteFile(binFilePath, b.Bytes(), 0644)
 }

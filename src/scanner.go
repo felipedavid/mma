@@ -52,10 +52,20 @@ func (s *Scanner) Scan() (tok Token, lit string) {
     ch_str := string(ch)
     s.next()
 
+    // Yeah, yeah, I know, this is kinda dumb. First time using Go. I know no better.
+    // @todo Rewrite this crap - fdavid 11/08/2021
     switch ch {
     case -1:
         tok = EOF
         return
+    case '.':
+        if s.ch == 't' {
+            tok = LABEL
+            lit = ".text"
+        } else if s.ch == 'd' {
+            tok = LABEL
+            lit = ".data"
+        }
     case '/':
         if s.ch == '/' {
             tok = COMMENT
