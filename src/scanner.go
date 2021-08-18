@@ -104,8 +104,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
         }
     case '(':
 		tok = LABEL
-		lit = s.scanLabel()
+		lit = ch_str + s.scanLine()
     default:
+		lit = ch_str + s.scanLine()
         tok = ILLEGAL
     }
     return

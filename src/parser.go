@@ -57,9 +57,18 @@ loop:
                 p.instructions = append(p.instructions, &JInstruction{lit: lit})
             }
         } else if ins_or_data == DATA {
-            p.dataStream = append(p.dataStream, &Data{lit: lit})
+            _, err := strconv.ParseInt(lit, 0, 16)
+            if err == nil {
+                p.dataStream = append(p.dataStream, &Data{lit: lit})
+            }
+
+            if tok == LABEL {
+                p.symbols[lit] = len(p.dataStream) + 1
+                p.dataStream = append(p.dataStream, &Data{lit: lit})
+            }
         }
     }
+    fmt.Println(p.symbols)
 
     for _, dat := range p.dataStream {
         switch d := dat.(type) {
@@ -82,7 +91,19 @@ loop:
 }
 
 func (p *Parser) parseData(d *Data) {
-    d.byte_data = 0x0000
+    fmt.Println(d.lit)
+    n, err := strconv.ParseInt(d.lit, 0, 16)
+    if err == nil {
+        d.byte_data = uint16(n)
+        return
+    }
+
+    lits := strings.Fields(d.lit)
+    n, err = strconv.ParseInt(lits[2], 0, 16)
+    if err == nil {
+        d.byte_data = uint16(n)
+        return
+    }
 }
 
 func (p *Parser) parseRInstruction(r *RInstruction) {
@@ -114,7 +135,8 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
     var reg_i uint16
     for n, reg := range lits[1:] {
         if reg[0] == '$' {
-            if val, ok := p.symbols[reg[1:]]; ok {
+            register_name := strings.ToUpper(reg[1:])
+            if val, ok := p.symbols[register_name]; ok {
                 reg_i = uint16(val)
             } else {
                 reg_n, err := strconv.Atoi(reg[1:])
@@ -142,7 +164,6 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
     clean_lit = strings.ReplaceAll(clean_lit, "(", " ")
     clean_lit = strings.ReplaceAll(clean_lit, ")", " ")
     lits := strings.Fields(clean_lit)
-    fmt.Println(lits)
 
     switch lits[0] {
         case "addi":
@@ -162,10 +183,11 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
         var reg_i uint16
         for n, field := range lits[1:4] {
             if field[0] == '$' {
-                if val, ok := p.symbols[field[1:]]; ok {
+                register_name := strings.ToUpper(field[1:])
+                if val, ok := p.symbols[register_name]; ok {
                     reg_i = uint16(val)
                 } else {
-                    reg_n, err := strconv.Atoi(field[1:])
+                    reg_n, err := strconv.Atoi(register_name)
                     if err != nil {
                         fmt.Println("Invalid register:", field)
                         os.Exit(1)
@@ -192,7 +214,8 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
         var reg_i uint16
         for n, field := range lits[1:4] {
             if field[0] == '$' {
-                if val, ok := p.symbols[field[1:]]; ok {
+                register_name := strings.ToUpper(field[1:])
+                if val, ok := p.symbols[register_name]; ok {
                     reg_i = uint16(val)
                 } else {
                     reg_n, err := strconv.Atoi(field[1:])

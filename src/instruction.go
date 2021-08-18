@@ -1,8 +1,6 @@
 package main
 
-import (
-    "fmt"
-)
+import "fmt"
 
 type DataInterface interface {
     BinaryString() string
