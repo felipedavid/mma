@@ -105,6 +105,11 @@ func (s *Scanner) Scan() (tok Token, lit string) {
     case '(':
 		tok = LABEL
 		lit = ch_str + s.scanLine()
+    case 'm':
+        if s.ch == 'o' && s.src[s.offset+1] == 'v' {
+            tok = PSEUDO_INSTRUCTION
+            lit = ch_str + s.scanLine()
+        }
     default:
 		lit = ch_str + s.scanLine()
         tok = ILLEGAL

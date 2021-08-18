@@ -28,6 +28,11 @@ const (
     DATA = 1
 )
 
+func (p *Parser) appendPseudoInstruction(lit string) {
+    fmt.Println(lit)
+    os.Exit(1)
+}
+
 func (p *Parser) Parse() (DataFile, AssemblyFile) {
     ins_or_data := INSTRUCTION
 loop:
@@ -48,13 +53,19 @@ loop:
             case EOF:
                 break loop
             case LABEL:
-                p.symbols[lit] = len(p.instructions)
+                if _, ok := p.symbols[lit]; ok {
+                    fmt.Printf("[!] Label \"%v\" já foi declarada. \n[!] Não é possível definir múltiplas labels com o mesmo nome.\n", lit)
+                    os.Exit(1)
+                }
+                p.symbols[lit[1:len(lit)-1]] = len(p.instructions)
             case R_INSTRUCTION:
                 p.instructions = append(p.instructions, &RInstruction{lit: lit})
             case I_INSTRUCTION:
                 p.instructions = append(p.instructions, &IInstruction{lit: lit})
             case J_INSTRUCTION:
                 p.instructions = append(p.instructions, &JInstruction{lit: lit})
+            case PSEUDO_INSTRUCTION:
+                p.appendPseudoInstruction(lit)
             }
         } else if ins_or_data == DATA {
             _, err := strconv.ParseInt(lit, 0, 16)
@@ -63,12 +74,18 @@ loop:
             }
 
             if tok == LABEL {
-                p.symbols[lit] = len(p.dataStream) + 1
+                lits := strings.Fields(lit)
+                label_name := lits[0][1:len(lits[0])-1]
+                if _, ok := p.symbols[label_name]; ok {
+                    fmt.Printf("[!] Label \"%v\" já foi declarada. \n[!] Não é possível definir múltiplas labels com o mesmo nome.\n", label_name)
+                    os.Exit(1)
+                }
+                p.symbols[label_name] = len(p.dataStream) + 1
+
                 p.dataStream = append(p.dataStream, &Data{lit: lit})
             }
         }
     }
-    fmt.Println(p.symbols)
 
     for _, dat := range p.dataStream {
         switch d := dat.(type) {
@@ -91,7 +108,6 @@ loop:
 }
 
 func (p *Parser) parseData(d *Data) {
-    fmt.Println(d.lit)
     n, err := strconv.ParseInt(d.lit, 0, 16)
     if err == nil {
         d.byte_data = uint16(n)
@@ -249,8 +265,6 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
 }
 
 func (p *Parser) parseJInstruction(j *JInstruction) {
-    fmt.Println(p.symbols)
-    fmt.Println(j.lit)
     label := strings.Fields(j.lit)[1]
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
         j.addr = uint16(val * 2)
