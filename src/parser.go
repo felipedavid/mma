@@ -29,8 +29,19 @@ const (
 )
 
 func (p *Parser) appendPseudoInstruction(lit string) {
-    fmt.Println(lit)
-    os.Exit(1)
+    no_commas := strings.ReplaceAll(lit, ",", " ")
+    lits := strings.Fields(no_commas)
+
+    switch lits[0] {
+    case "mov":
+        if lits[1][0] == '$' && lits[2][0] == '$' { // register to register
+            instruction := "add " + lits[1] + ", " + lits[2] + ", $r0"
+           p.instructions = append(p.instructions, &RInstruction{lit: instruction})
+        } else {
+            fmt.Println("Formato da instrução \"mov\" é inválido.\n")
+            os.Exit(1)
+        }
+    }
 }
 
 func (p *Parser) Parse() (DataFile, AssemblyFile) {
