@@ -34,9 +34,19 @@ func (p *Parser) appendPseudoInstruction(lit string) {
 
     switch lits[0] {
     case "mov":
-        if lits[1][0] == '$' && lits[2][0] == '$' { // register to register
-            instruction := "add " + lits[1] + ", " + lits[2] + ", $r0"
-           p.instructions = append(p.instructions, &RInstruction{lit: instruction})
+        to := lits[1]
+        from := lits[2]
+        if to[0] == '$' && from[0] == '$' { // register to register
+            instruction := "add " + to + ", " + from + ", $r0"
+            p.instructions = append(p.instructions, &RInstruction{lit: instruction})
+        } else if to[0] == '$' && from[0] == '[' {
+            addr, _ := parseImmediate(from[1:len(from)-1])
+            instruction := "lw " + to + ", " + strconv.Itoa(int(addr)) + "($0)"
+            p.instructions = append(p.instructions, &IInstruction{lit: instruction})
+        } else if to[0] == '[' && from[0] == '$' {
+            addr, _ := parseImmediate(to[1:len(to)-1])
+            instruction := "sw " + from + ", " + strconv.Itoa(int(addr)) + "($0)"
+            p.instructions = append(p.instructions, &IInstruction{lit: instruction})
         } else {
             fmt.Println("Formato da instrução \"mov\" é inválido.\n")
             os.Exit(1)
