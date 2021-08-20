@@ -20,25 +20,23 @@ func main() {
 	p.Init(asmData)
 	dataFile, assemblyFile := p.Parse()
 
-	var d bytes.Buffer
-	for n, i := range dataFile.DataStream {
-		if n == 0 {
-			d.WriteString("v2.0 raw\n")
-		}
-		d.WriteString(i.BinaryString() + "\n")
-	}
+    if len(dataFile.DataStream) > 0{
+        var d bytes.Buffer
+        d.WriteString("v2.0 raw\n")
+        for _, i := range dataFile.DataStream {
+            d.WriteString(i.BinaryString() + "\n")
+        }
+	    datFilePath := strings.Replace(asmFilePath, ".m", ".dat", 1)
+	    ioutil.WriteFile(datFilePath, d.Bytes(), 0644)
+    }
 
-	var b bytes.Buffer
-	for n, i := range assemblyFile.Instructions {
-		if n == 0 {
-			b.WriteString("v2.0 raw\n")
-		}
-		b.WriteString(i.BinaryString() + "\n")
-	}
-
-	datFilePath := strings.Replace(asmFilePath, ".m", ".dat", 1)
-	binFilePath := strings.Replace(asmFilePath, ".m", ".ins", 1)
-
-	ioutil.WriteFile(datFilePath, d.Bytes(), 0644)
-	ioutil.WriteFile(binFilePath, b.Bytes(), 0644)
+    if len(assemblyFile.Instructions) > 0{
+        var b bytes.Buffer
+        b.WriteString("v2.0 raw\n")
+        for _, i := range assemblyFile.Instructions {
+            b.WriteString(i.BinaryString() + "\n")
+        }
+        binFilePath := strings.Replace(asmFilePath, ".m", ".ins", 1)
+        ioutil.WriteFile(binFilePath, b.Bytes(), 0644)
+    }
 }

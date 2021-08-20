@@ -2,21 +2,28 @@ package main
 
 import (
     "strconv"
-    "os"
-    "fmt"
 )
 
-func parseImmediate(immd string) (value int, err error) {
+func parseInteger(integer string) (value int, err error) {
     var tmp int64
-    if len(immd) > 2 {
-    } else {
-        tmp, err = strconv.ParseInt(immd, 10, 16)
+    if tmp, err = strconv.ParseInt(integer, 10, 16); err == nil {
+        value = int(tmp)
+        return
     }
-    value = int(tmp)
 
-    if err != nil {
-        fmt.Printf("Imediato '%v' invalido.\n", immd)
-        os.Exit(1)
+    if len(integer) > 3 {
+        if tmp, err = strconv.ParseInt(integer[2:], 16, 16); err == nil {
+            value = int(tmp)
+            return
+        }
     }
+
     return
+}
+
+func isStringInt(str string) bool {
+    if _, err := strconv.Atoi(str); err == nil {
+        return true
+    }
+    return false
 }

@@ -28,28 +28,51 @@ const (
     DATA = 1
 )
 
+func (p *Parser) isLabel(lit string) bool {
+    if _, ok := p.symbols[lit]; ok {
+        return true
+    }
+
+    if _, ok := p.symbols[lit[1:len(lit)-1]]; ok {
+        return true
+    }
+
+    return false
+}
+
 func (p *Parser) appendPseudoInstruction(lit string) {
     no_commas := strings.ReplaceAll(lit, ",", " ")
     lits := strings.Fields(no_commas)
 
+    var instruction string
     switch lits[0] {
     case "mov":
         to := lits[1]
         from := lits[2]
-        if to[0] == '$' && from[0] == '$' { // register to register
-            instruction := "add " + to + ", " + from + ", $r0"
-            p.instructions = append(p.instructions, &RInstruction{lit: instruction})
-        } else if to[0] == '$' && from[0] == '[' {
-            addr, _ := parseImmediate(from[1:len(from)-1])
-            instruction := "lw " + to + ", " + strconv.Itoa(int(addr)) + "($0)"
-            p.instructions = append(p.instructions, &IInstruction{lit: instruction})
-        } else if to[0] == '[' && from[0] == '$' {
-            addr, _ := parseImmediate(to[1:len(to)-1])
-            instruction := "sw " + from + ", " + strconv.Itoa(int(addr)) + "($0)"
-            p.instructions = append(p.instructions, &IInstruction{lit: instruction})
-        } else {
-            fmt.Println("Formato da instrução \"mov\" é inválido.\n")
+        if to[0] == '(' || from[0] == '(' {
+            fmt.Println("Labels devem ser referenciadas sem parênteses.")
             os.Exit(1)
+        } else if to[0] == '$' && from[0] == '$' { // register to register
+            instruction = "add " + to + ", " + from + ", $r0"
+            p.instructions = append(p.instructions, &RInstruction{lit: instruction})
+        } else {
+            if to[0] == '$' && from[0] == '[' { // memory addr to register
+                addr, _ := parseInteger(from[1:len(from)-1])
+                instruction = "lw " + to + ", " + strconv.Itoa(int(addr)) + "($0)"
+            } else if to[0] == '[' && from[0] == '$' {
+                addr, _ := parseInteger(to[1:len(to)-1])
+                instruction = "sw " + from + ", " + strconv.Itoa(int(addr)) + "($0)"
+            } else if to[0] == '$' && p.isLabel(from) {
+                instruction = "lw " + to + ", " + strconv.Itoa(p.symbols[from]) + "($0)"
+            } else if p.isLabel(to) && from[0] == '$' {
+                instruction = "sw " + from + ", " + strconv.Itoa(p.symbols[to]) + "($0)"
+            } else if to[0] == '$' && isStringInt(from) { // immediate to register
+                instruction = "addi " + to + ", $r0, " + from
+            } else {
+                fmt.Printf("Formato da instrução \"%v\" é inválido.\n", lit)
+                os.Exit(1)
+            }
+            p.instructions = append(p.instructions, &IInstruction{lit: instruction})
         }
     }
 }
@@ -89,12 +112,9 @@ loop:
                 p.appendPseudoInstruction(lit)
             }
         } else if ins_or_data == DATA {
-            _, err := strconv.ParseInt(lit, 0, 16)
-            if err == nil {
-                p.dataStream = append(p.dataStream, &Data{lit: lit})
-            }
 
-            if tok == LABEL {
+            switch tok{
+            case LABEL:
                 lits := strings.Fields(lit)
                 label_name := lits[0][1:len(lits[0])-1]
                 if _, ok := p.symbols[label_name]; ok {
@@ -102,7 +122,12 @@ loop:
                     os.Exit(1)
                 }
                 p.symbols[label_name] = len(p.dataStream) + 1
-
+                if len(lits) >= 3 {
+                    lits = lits[1:]
+                    p.dataStream = append(p.dataStream, &Data{lit: lits[0] + " " + lits[1]})
+                }
+            case WORD:
+                fmt.Println(lit)
                 p.dataStream = append(p.dataStream, &Data{lit: lit})
             }
         }
@@ -129,15 +154,15 @@ loop:
 }
 
 func (p *Parser) parseData(d *Data) {
-    n, err := strconv.ParseInt(d.lit, 0, 16)
-    if err == nil {
-        d.byte_data = uint16(n)
-        return
-    }
-
     lits := strings.Fields(d.lit)
-    n, err = strconv.ParseInt(lits[2], 0, 16)
-    if err == nil {
+    fmt.Println(lits)
+
+    if lits[0] == ".word" {
+        n, err := parseInteger(lits[1])
+        if err != nil {
+            fmt.Println("Declaração de dado inválida: ", d.lit)
+            os.Exit(1)
+        }
         d.byte_data = uint16(n)
         return
     }
@@ -212,7 +237,7 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
         case "sw":
             i.op = 10
         default:
-            fmt.Println("Invalid instruction:", lits[0])
+            fmt.Println("Invalid instruction:", i.lit)
             os.Exit(1)
     }
 

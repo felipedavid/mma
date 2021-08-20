@@ -65,6 +65,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
         } else if s.ch == 'd' {
             tok = LABEL
             lit = ".data"
+        } else if s.ch == 'w' {
+            tok = WORD
+            lit = ch_str + s.scanLine()
         }
     case '/':
         if s.ch == '/' {
