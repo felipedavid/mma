@@ -149,6 +149,7 @@ func (p *Parser) parseData(d *Data) {
     fmt.Println(lits)
 
     if lits[0] == ".word" {
+        fmt.Println(lits[1])
         n, err := parseInteger(lits[1])
         if err != nil {
             fmt.Println("Declaração de dado inválida: ", d.lit)
@@ -185,7 +186,9 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
     }
     lits = lits[1:]
 
+    fmt.Println(lits)
     registers := p.parseRegisters(lits)
+    fmt.Println(registers)
     r.rd = registers[0]
     r.rs = registers[1]
     r.rt = registers[2]
@@ -278,7 +281,7 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
                 } else {
                     reg_n, err := strconv.Atoi(field[1:])
                     if err != nil {
-                        fmt.Println("Invalid register:", field)
+                        fmt.Println("Registrador inválido:", field)
                         os.Exit(1)
                     }
                     reg_i = uint16(reg_n)
@@ -291,10 +294,9 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
                     i.rt = reg_i
                 }
             } else if n == 2 {
-                immd, err := strconv.Atoi(field[:])
+                immd, err := parseInteger(field)
                 if err != nil {
-                    fmt.Println("Invalid immediate:", field[:])
-                    fmt.Println("Only valid immediates are base 10 integers.:")
+                    fmt.Println("Imediato inválido:", field)
                     os.Exit(1)
                 }
                 i.immd = uint16(immd)
@@ -311,12 +313,12 @@ func (p *Parser) parseJInstruction(j *JInstruction) {
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
         j.addr = uint16(val * 2)
     } else {
-        addr, err := strconv.Atoi(label)
+        addr, err := parseInteger(label)
         if err != nil {
-            fmt.Printf("Label \"%v\" dosen't exist.\n", label)
+            fmt.Printf("Label \"%v\" não existe.\n", label)
             os.Exit(1)
         }
-        j.addr = uint16(addr)
+        j.addr = uint16(addr) / 2
     }
 }
 
@@ -350,10 +352,20 @@ func (p *Parser) isRegister(str string) bool {
 }
 
 func (p *Parser) parseRegisters(lit []string) (registers []uint16) {
+    var register_id uint16
+    var tmp int
+
     for _, v := range lit {
+        register_name := v[1:]
         if p.isRegister(v) {
-            registers = append(registers, uint16(p.symbols[strings.ToUpper(v[1:])]))
+            if isStringInt(register_name) {
+                tmp, _ = strconv.Atoi(register_name)
+                register_id = uint16(tmp)
+            } else {
+                register_id = uint16(p.symbols[strings.ToUpper(v[1:])])
+            }
         }
+        registers = append(registers, register_id)
     }
     return
 }

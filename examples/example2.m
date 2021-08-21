@@ -1,14 +1,13 @@
 .data:
-(a) int 16
-(b) int 23
-(c) int 12
+    word 5
+    word 5
 
 .text:
-lw $r2, 2($r0)
-lw $r3, 6($r0)
-(haha)
-add $r1, $r2, $r3
-sw $r1, 4($r0)
-lw $r1, 0($r0)
-lw $r4, 2($r0)
-j haha
+    lw $1, 0($0)
+    lw $2, 2($0)
+    add $3, $1, $2
+    beq $1, $2, 0x03
+    sub $3, $1, $2
+    sw $3, 4($0)
+    j 0x0008
+    sw $3, 4($0)

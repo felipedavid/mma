@@ -69,5 +69,6 @@ type JInstruction struct {
 func (j *JInstruction) BinaryString() string {
     var bin uint16
     bin |= j.addr
+    bin |= 2 << 12;
     return fmt.Sprintf("%04x", bin)
 }
