@@ -20,23 +20,23 @@ func main() {
 	p.Init(asmData)
 	dataFile, assemblyFile := p.Parse()
 
-    if len(dataFile.DataStream) > 0{
-        var d bytes.Buffer
-        d.WriteString("v2.0 raw\n")
+    if len(dataFile.DataStream) > 0 {
+        var dataBuffer bytes.Buffer
+        dataBuffer.WriteString("v2.0 raw\n")
         for _, i := range dataFile.DataStream {
-            d.WriteString(i.BinaryString() + "\n")
+            dataBuffer.WriteString(i.BinaryString() + "\n")
         }
 	    datFilePath := strings.Replace(asmFilePath, ".m", ".dat", 1)
-	    ioutil.WriteFile(datFilePath, d.Bytes(), 0644)
+	    ioutil.WriteFile(datFilePath, dataBuffer.Bytes(), 0644)
     }
 
-    if len(assemblyFile.Instructions) > 0{
-        var b bytes.Buffer
-        b.WriteString("v2.0 raw\n")
+    if len(assemblyFile.Instructions) > 0 {
+        var instructionBuffer bytes.Buffer
+        instructionBuffer.WriteString("v2.0 raw\n")
         for _, i := range assemblyFile.Instructions {
-            b.WriteString(i.BinaryString() + "\n")
+            instructionBuffer.WriteString(i.BinaryString() + "\n")
         }
         binFilePath := strings.Replace(asmFilePath, ".m", ".ins", 1)
-        ioutil.WriteFile(binFilePath, b.Bytes(), 0644)
+        ioutil.WriteFile(binFilePath, instructionBuffer.Bytes(), 0644)
     }
 }

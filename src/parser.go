@@ -28,17 +28,6 @@ const (
     DATA = 1
 )
 
-func (p *Parser) isLabel(lit string) bool {
-    if _, ok := p.symbols[lit]; ok {
-        return true
-    }
-
-    if _, ok := p.symbols[lit[1:len(lit)-1]]; ok {
-        return true
-    }
-
-    return false
-}
 
 func (p *Parser) appendPseudoInstruction(lit string) {
     no_commas := strings.ReplaceAll(lit, ",", " ")
@@ -52,21 +41,21 @@ func (p *Parser) appendPseudoInstruction(lit string) {
         if to[0] == '(' || from[0] == '(' {
             fmt.Println("Labels devem ser referenciadas sem parênteses.")
             os.Exit(1)
-        } else if to[0] == '$' && from[0] == '$' { // register to register
+        } else if p.isRegister(to) && p.isRegister(from) {
             instruction = "add " + to + ", " + from + ", $r0"
             p.instructions = append(p.instructions, &RInstruction{lit: instruction})
         } else {
-            if to[0] == '$' && from[0] == '[' { // memory addr to register
+            if p.isRegister(to) && isMemoryReference(from) {
                 addr, _ := parseInteger(from[1:len(from)-1])
                 instruction = "lw " + to + ", " + strconv.Itoa(int(addr)) + "($0)"
-            } else if to[0] == '[' && from[0] == '$' {
+            } else if isMemoryReference(to) && p.isRegister(from) {
                 addr, _ := parseInteger(to[1:len(to)-1])
                 instruction = "sw " + from + ", " + strconv.Itoa(int(addr)) + "($0)"
-            } else if to[0] == '$' && p.isLabel(from) {
+            } else if p.isRegister(to) && p.isLabel(from) {
                 instruction = "lw " + to + ", " + strconv.Itoa(p.symbols[from]) + "($0)"
-            } else if p.isLabel(to) && from[0] == '$' {
+            } else if p.isLabel(to) && p.isRegister(from) {
                 instruction = "sw " + from + ", " + strconv.Itoa(p.symbols[to]) + "($0)"
-            } else if to[0] == '$' && isStringInt(from) { // immediate to register
+            } else if p.isRegister(to) && isStringInt(from) {
                 instruction = "addi " + to + ", $r0, " + from
             } else {
                 fmt.Printf("Formato da instrução \"%v\" é inválido.\n", lit)
@@ -98,7 +87,8 @@ loop:
                 break loop
             case LABEL:
                 if _, ok := p.symbols[lit]; ok {
-                    fmt.Printf("[!] Label \"%v\" já foi declarada. \n[!] Não é possível definir múltiplas labels com o mesmo nome.\n", lit)
+                    fmt.Printf(`[!] Label \"%v\" já foi declarada. \n[!] 
+                        Não é possível definir múltiplas labels com o mesmo nome.\n`, lit)
                     os.Exit(1)
                 }
                 p.symbols[lit[1:len(lit)-1]] = len(p.instructions)
@@ -118,7 +108,8 @@ loop:
                 lits := strings.Fields(lit)
                 label_name := lits[0][1:len(lits[0])-1]
                 if _, ok := p.symbols[label_name]; ok {
-                    fmt.Printf("[!] Label \"%v\" já foi declarada. \n[!] Não é possível definir múltiplas labels com o mesmo nome.\n", label_name)
+                    fmt.Printf(`[!] Label \"%v\" já foi declarada.\n
+                    [!] Não é possível definir múltiplas labels com o mesmo nome.\n`, label_name)
                     os.Exit(1)
                 }
                 p.symbols[label_name] = len(p.dataStream) + 1
@@ -192,33 +183,38 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
             fmt.Println("Invalid instruction:", lits[0])
             os.Exit(1)
     }
+    lits = lits[1:]
 
+    registers := p.parseRegisters(lits)
+    r.rd = registers[0]
+    r.rs = registers[1]
+    r.rt = registers[2]
     // Parsing registers
-    var reg_i uint16
-    for n, reg := range lits[1:] {
-        if reg[0] == '$' {
-            register_name := strings.ToUpper(reg[1:])
-            if val, ok := p.symbols[register_name]; ok {
-                reg_i = uint16(val)
-            } else {
-                reg_n, err := strconv.Atoi(reg[1:])
-                if err != nil {
-                    fmt.Println("Invalid register:", reg)
-                    os.Exit(1)
-                }
-                reg_i = uint16(reg_n)
-            }
+    //var reg_i uint16
+    //for n, reg := range lits {
+    //    if p.isRegister(reg) {
+    //        register_name := strings.ToUpper(reg[1:])
+    //        if val, ok := p.symbols[register_name]; ok {
+    //            reg_i = uint16(val)
+    //        } else {
+    //            reg_n, err := strconv.Atoi(reg[1:])
+    //            if err != nil {
+    //                fmt.Println("Invalid register:", reg)
+    //                os.Exit(1)
+    //            }
+    //            reg_i = uint16(reg_n)
+    //        }
 
-            switch n {
-            case 0:
-                r.rd = reg_i
-            case 1:
-                r.rs = reg_i
-            case 2:
-                r.rt = reg_i
-            }
-        }
-    }
+    //        switch n {
+    //        case 0:
+    //            r.rd = reg_i
+    //        case 1:
+    //            r.rs = reg_i
+    //        case 2:
+    //            r.rt = reg_i
+    //        }
+    //    }
+    //}
 }
 
 func (p *Parser) parseIInstruction(i *IInstruction) {
@@ -322,4 +318,42 @@ func (p *Parser) parseJInstruction(j *JInstruction) {
         }
         j.addr = uint16(addr)
     }
+}
+
+func (p *Parser) isLabel(lit string) bool {
+    if _, ok := p.symbols[lit]; ok {
+        return true
+    }
+
+    if _, ok := p.symbols[lit[1:len(lit)-1]]; ok {
+        return true
+    }
+
+    return false
+}
+
+func (p *Parser) isRegister(str string) bool {
+    if str[0] != '$' {
+        return false
+    }
+    str = str[1:]
+
+    if isStringInt(str) {
+        return true
+    }
+
+    if _, ok := p.symbols[strings.ToUpper(str)]; ok {
+        return true
+    }
+
+    return false
+}
+
+func (p *Parser) parseRegisters(lit []string) (registers []uint16) {
+    for _, v := range lit {
+        if p.isRegister(v) {
+            registers = append(registers, uint16(p.symbols[strings.ToUpper(v[1:])]))
+        }
+    }
+    return
 }

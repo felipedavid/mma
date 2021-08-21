@@ -27,3 +27,7 @@ func isStringInt(str string) bool {
     }
     return false
 }
+
+func isMemoryReference(str string) bool {
+    return str[0] == '[' && str[len(str)-1] == ']'
+}
