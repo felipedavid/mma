@@ -122,7 +122,10 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 
 func (s *Scanner) scanLine() string {
     offs := s.offset
-    for s.ch != '\n' && s.ch != '\r' && s.ch >= 0 {// && s.ch != ' ' {
+    for s.ch != '\n' && s.ch != '\r' && s.ch >= 0  {// && s.ch != ' ' {
+        if s.ch == '/' {
+            break
+        }
         s.next()
     }
     return string(s.src[offs:s.offset])

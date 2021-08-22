@@ -118,7 +118,6 @@ loop:
                     p.dataStream = append(p.dataStream, &Data{lit: lits[0] + " " + lits[1]})
                 }
             case WORD:
-                fmt.Println(lit)
                 p.dataStream = append(p.dataStream, &Data{lit: lit})
             }
         }
@@ -146,10 +145,8 @@ loop:
 
 func (p *Parser) parseData(d *Data) {
     lits := strings.Fields(d.lit)
-    fmt.Println(lits)
 
     if lits[0] == ".word" {
-        fmt.Println(lits[1])
         n, err := parseInteger(lits[1])
         if err != nil {
             fmt.Println("Declaração de dado inválida: ", d.lit)
@@ -181,17 +178,20 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
         case "sub":
             r.funct = 3
         default:
-            fmt.Println("Invalid instruction:", lits[0])
+            fmt.Printf("[!] ERRO: Instrução inválida: %v", r.lit)
             os.Exit(1)
     }
     lits = lits[1:]
 
-    fmt.Println(lits)
     registers := p.parseRegisters(lits)
-    fmt.Println(registers)
+    if len(registers) != 3 {
+        fmt.Printf("[!] ERRO: Instrução \"%v\" deveria referenciar 3 registradores.\n", r.lit)
+        os.Exit(1)
+    }
     r.rd = registers[0]
     r.rs = registers[1]
     r.rt = registers[2]
+
     // Parsing registers
     //var reg_i uint16
     //for n, reg := range lits {
@@ -240,6 +240,7 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
             os.Exit(1)
     }
 
+    // @todo: Clean up this mess
     if i.op == 3 || i.op == 10 { // if "lw" or "sw"
         var reg_i uint16
         for n, field := range lits[1:4] {
@@ -287,11 +288,20 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
                     reg_i = uint16(reg_n)
                 }
 
-                switch n {
-                case 0:
-                    i.rs = reg_i
-                case 1:
-                    i.rt = reg_i
+                if (i.op == 8) {
+                    switch n {
+                    case 0:
+                        i.rt = reg_i
+                    case 1:
+                        i.rs = reg_i
+                    }
+                } else {
+                    switch n {
+                    case 0:
+                        i.rs = reg_i
+                    case 1:
+                        i.rt = reg_i
+                    }
                 }
             } else if n == 2 {
                 immd, err := parseInteger(field)
@@ -311,7 +321,7 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
 func (p *Parser) parseJInstruction(j *JInstruction) {
     label := strings.Fields(j.lit)[1]
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
-        j.addr = uint16(val * 2)
+        j.addr = uint16(val)
     } else {
         addr, err := parseInteger(label)
         if err != nil {
@@ -327,8 +337,10 @@ func (p *Parser) isLabel(lit string) bool {
         return true
     }
 
-    if _, ok := p.symbols[lit[1:len(lit)-1]]; ok {
-        return true
+    if len(lit) > 2 {
+        if _, ok := p.symbols[lit[1:len(lit)-1]]; ok {
+            return true
+        }
     }
 
     return false
