@@ -183,7 +183,10 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
     }
     lits = lits[1:]
 
-    registers := p.parseRegisters(lits)
+    var registers []uint16
+    registers, lits = p.parseRegisters(lits)
+    fmt.Println(registers)
+    fmt.Println(lits)
     if len(registers) != 3 {
         fmt.Printf("[!] ERRO: Instrução \"%v\" deveria referenciar 3 registradores.\n", r.lit)
         os.Exit(1)
@@ -191,33 +194,6 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
     r.rd = registers[0]
     r.rs = registers[1]
     r.rt = registers[2]
-
-    // Parsing registers
-    //var reg_i uint16
-    //for n, reg := range lits {
-    //    if p.isRegister(reg) {
-    //        register_name := strings.ToUpper(reg[1:])
-    //        if val, ok := p.symbols[register_name]; ok {
-    //            reg_i = uint16(val)
-    //        } else {
-    //            reg_n, err := strconv.Atoi(reg[1:])
-    //            if err != nil {
-    //                fmt.Println("Invalid register:", reg)
-    //                os.Exit(1)
-    //            }
-    //            reg_i = uint16(reg_n)
-    //        }
-
-    //        switch n {
-    //        case 0:
-    //            r.rd = reg_i
-    //        case 1:
-    //            r.rs = reg_i
-    //        case 2:
-    //            r.rt = reg_i
-    //        }
-    //    }
-    //}
 }
 
 func (p *Parser) parseIInstruction(i *IInstruction) {
@@ -240,82 +216,110 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
             os.Exit(1)
     }
 
-    // @todo: Clean up this mess
-    if i.op == 3 || i.op == 10 { // if "lw" or "sw"
-        var reg_i uint16
-        for n, field := range lits[1:4] {
-            if field[0] == '$' {
-                register_name := strings.ToUpper(field[1:])
-                if val, ok := p.symbols[register_name]; ok {
-                    reg_i = uint16(val)
-                } else {
-                    reg_n, err := strconv.Atoi(register_name)
-                    if err != nil {
-                        fmt.Println("Invalid register:", field)
-                        os.Exit(1)
-                    }
-                    reg_i = uint16(reg_n)
-                }
-
-                switch n {
-                case 0:
-                    i.rt = reg_i
-                case 2:
-                    i.rs = reg_i
-                }
-            } else if n == 1 {
-                immd, err := strconv.Atoi(field)
-                if err != nil {
-                    fmt.Println("Invalid immediate:", immd)
-                    os.Exit(1)
-                }
-                i.immd = uint16(immd)
-            }
-        }
-    } else if i.op == 8 || i.op == 4 { // if "addi" or "beq"
-        var reg_i uint16
-        for n, field := range lits[1:4] {
-            if field[0] == '$' {
-                register_name := strings.ToUpper(field[1:])
-                if val, ok := p.symbols[register_name]; ok {
-                    reg_i = uint16(val)
-                } else {
-                    reg_n, err := strconv.Atoi(field[1:])
-                    if err != nil {
-                        fmt.Println("Registrador inválido:", field)
-                        os.Exit(1)
-                    }
-                    reg_i = uint16(reg_n)
-                }
-
-                if (i.op == 8) {
-                    switch n {
-                    case 0:
-                        i.rt = reg_i
-                    case 1:
-                        i.rs = reg_i
-                    }
-                } else {
-                    switch n {
-                    case 0:
-                        i.rs = reg_i
-                    case 1:
-                        i.rt = reg_i
-                    }
-                }
-            } else if n == 2 {
-                immd, err := parseInteger(field)
-                if err != nil {
-                    fmt.Println("Imediato inválido:", field)
-                    os.Exit(1)
-                }
-                i.immd = uint16(immd)
-            }
-        }
-    } else {
-        fmt.Println("Invalid I Instruction:", lits[0])
+    var registers []uint16
+    registers, lits = p.parseRegisters(lits)
+    fmt.Println(registers)
+    fmt.Println(lits)
+    if len(registers) != 2 {
+        fmt.Printf("[!] ERRO: Instrução \"%v\" deveria referenciar 2 registradores.\n", i.lit)
         os.Exit(1)
     }
+
+    if i.op == 3 || i.op == 10 || i.op == 8 {
+        i.rt = registers[0]
+        i.rs = registers[1]
+    } else if (i.op == 4) {
+        i.rt = registers[1]
+        i.rs = registers[0]
+    } else {
+        fmt.Println("[!] Instrução \"%v\" inválida.", i.lit)
+        os.Exit(1)
+    }
+
+    if len(lits) == 1 && isStringInt(lits[0]) {
+        value, _ := parseInteger(lits[0])
+        i.immd = uint16(value)
+    } else {
+        fmt.Println("[!] Instrução \"%v\" inválida.", i.lit)
+        os.Exit(1)
+    }
+
+    // @todo: Clean up this mess
+    //if i.op == 3 || i.op == 10 { // if "lw" or "sw"
+    //    var reg_i uint16
+    //    for n, field := range lits[1:4] {
+    //        if field[0] == '$' {
+    //            register_name := strings.ToUpper(field[1:])
+    //            if val, ok := p.symbols[register_name]; ok {
+    //                reg_i = uint16(val)
+    //            } else {
+    //                reg_n, err := strconv.Atoi(register_name)
+    //                if err != nil {
+    //                    fmt.Println("Invalid register:", field)
+    //                    os.Exit(1)
+    //                }
+    //                reg_i = uint16(reg_n)
+    //            }
+
+    //            switch n {
+    //            case 0:
+    //                i.rt = reg_i
+    //            case 2:
+    //                i.rs = reg_i
+    //            }
+    //        } else if n == 1 {
+    //            immd, err := strconv.Atoi(field)
+    //            if err != nil {
+    //                fmt.Println("Invalid immediate:", immd)
+    //                os.Exit(1)
+    //            }
+    //            i.immd = uint16(immd)
+    //        }
+    //    }
+    //} else if i.op == 8 || i.op == 4 { // if "addi" or "beq"
+    //    var reg_i uint16
+    //    for n, field := range lits[1:4] {
+    //        if field[0] == '$' {
+    //            register_name := strings.ToUpper(field[1:])
+    //            if val, ok := p.symbols[register_name]; ok {
+    //                reg_i = uint16(val)
+    //            } else {
+    //                reg_n, err := strconv.Atoi(field[1:])
+    //                if err != nil {
+    //                    fmt.Println("Registrador inválido:", field)
+    //                    os.Exit(1)
+    //                }
+    //                reg_i = uint16(reg_n)
+    //            }
+
+    //            if (i.op == 8) {
+    //                switch n {
+    //                case 0:
+    //                    i.rt = reg_i
+    //                case 1:
+    //                    i.rs = reg_i
+    //                }
+    //            } else {
+    //                switch n {
+    //                case 0:
+    //                    i.rs = reg_i
+    //                case 1:
+    //                    i.rt = reg_i
+    //                }
+    //            }
+    //        } else if n == 2 {
+    //            immd, err := parseInteger(field)
+    //            if err != nil {
+    //                fmt.Println("Imediato inválido:", field)
+    //                os.Exit(1)
+    //            }
+    //            i.immd = uint16(immd)
+    //        }
+    //    }
+    //} else {
+    //    fmt.Println("Invalid I Instruction:", lits[0])
+    //    os.Exit(1)
+    //}
 }
 
 func (p *Parser) parseJInstruction(j *JInstruction) {
@@ -354,7 +358,7 @@ func (p *Parser) isRegister(str string) bool {
 
     if isStringInt(str) {
         return true
-    }
+    }]
 
     if _, ok := p.symbols[strings.ToUpper(str)]; ok {
         return true
@@ -363,10 +367,11 @@ func (p *Parser) isRegister(str string) bool {
     return false
 }
 
-func (p *Parser) parseRegisters(lit []string) (registers []uint16) {
+func (p *Parser) parseRegisters(lit []string) (registers []uint16, new_lit []string) {
     var register_id uint16
     var tmp int
 
+    lit = lit[1:]
     for _, v := range lit {
         register_name := v[1:]
         if p.isRegister(v) {
@@ -376,8 +381,14 @@ func (p *Parser) parseRegisters(lit []string) (registers []uint16) {
             } else {
                 register_id = uint16(p.symbols[strings.ToUpper(v[1:])])
             }
+            registers = append(registers, register_id)
+            //if len(lit) > 1 {
+            //    lit = append(lit[:i], lit[i+1]) // remove the register from the slice
+            //}
+        } else {
+            new_lit = append(new_lit, v)
         }
-        registers = append(registers, register_id)
     }
+    new_lit = lit
     return
 }
