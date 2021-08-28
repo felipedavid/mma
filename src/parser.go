@@ -180,7 +180,6 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
             fmt.Printf("[!] ERRO: Instrução inválida: %v", r.lit)
             os.Exit(1)
     }
-    lits = lits[1:]
 
     var registers []uint16
     registers, lits = p.parseRegisters(lits)
@@ -231,15 +230,16 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
         i.rt = registers[1]
         i.rs = registers[0]
     } else {
-        fmt.Println("[!] Instrução \"%v\" inválida.", i.lit)
+        fmt.Printf("[!] Instrução \"%v\" inválida.", i.lit)
         os.Exit(1)
     }
 
+    fmt.Println(lits)
     if len(lits) == 1 && isStringInt(lits[0]) {
         value, _ := parseInteger(lits[0])
         i.immd = uint16(value)
     } else {
-        fmt.Println("[!] Instrução \"%v\" inválida.", i.lit)
+        fmt.Printf("[!] Instrução \"%v\" inválida.", i.lit)
         os.Exit(1)
     }
 }
@@ -293,6 +293,7 @@ func (p *Parser) parseRegisters(lit []string) (registers []uint16, new_lit []str
     var register_id uint16
     var tmp int
 
+    lit = lit[1:]
     for _, v := range lit {
         register_name := v[1:]
         if p.isRegister(v) {
@@ -310,6 +311,6 @@ func (p *Parser) parseRegisters(lit []string) (registers []uint16, new_lit []str
             new_lit = append(new_lit, v)
         }
     }
-    new_lit = lit
+    //new_lit = lit
     return
 }
