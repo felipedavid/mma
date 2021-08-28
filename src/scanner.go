@@ -46,11 +46,32 @@ func (s *Scanner) scanComment() string {
     return string(s.src[offs:s.offset])
 }
 
+func isItLabel(literal []byte, offset int) bool {
+    i := offset
+    for i < len(literal){
+        if i != 0 && literal[i] == ':' {
+            return true
+        }
+
+        if literal[i] == ' ' || literal[i] == '\n' || literal[i] == '\t' {
+            return false
+        }
+        i++
+    }
+    return false
+}
+
 func (s *Scanner) Scan() (tok Token, lit string) {
     s.skipWhitespace()
     ch := s.ch
     ch_str := string(ch)
     s.next()
+
+    if isItLabel(s.src, s.offset) {
+        tok = LABEL
+        lit = ch_str + s.scanLine()
+        return
+    }
 
     // Yeah, yeah, I know, this is kinda dumb. First time using Go. I know no better.
     // @todo Rewrite this crap - fdavid 11/08/2021
@@ -69,11 +90,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
             tok = WORD
             lit = ch_str + s.scanLine()
         }
-    case '/':
-        if s.ch == '/' {
-            tok = COMMENT
-            lit = ch_str + s.scanComment()
-        }
+    case '#':
+        tok = COMMENT
+        lit = ch_str + s.scanComment()
     case 'j':
         if s.ch == ' ' {
             tok = J_INSTRUCTION
@@ -82,6 +101,9 @@ func (s *Scanner) Scan() (tok Token, lit string) {
     case 'l':
         if s.ch == 'w' {
             tok = I_INSTRUCTION
+            lit = ch_str + s.scanLine()
+        } else if s.ch == 'i' {
+            tok = PSEUDO_INSTRUCTION
             lit = ch_str + s.scanLine()
         }
     case 's':
@@ -105,14 +127,6 @@ func (s *Scanner) Scan() (tok Token, lit string) {
             tok = I_INSTRUCTION
             lit = ch_str + s.scanLine()
         }
-    case '(':
-		tok = LABEL
-		lit = ch_str + s.scanLine()
-    case 'm':
-        if s.ch == 'o' && s.src[s.offset+1] == 'v' {
-            tok = PSEUDO_INSTRUCTION
-            lit = ch_str + s.scanLine()
-        }
     default:
 		lit = ch_str + s.scanLine()
         tok = ILLEGAL
@@ -123,7 +137,7 @@ func (s *Scanner) Scan() (tok Token, lit string) {
 func (s *Scanner) scanLine() string {
     offs := s.offset
     for s.ch != '\n' && s.ch != '\r' && s.ch >= 0  {// && s.ch != ' ' {
-        if s.ch == '/' {
+        if s.ch == '#' {
             break
         }
         s.next()
@@ -139,7 +153,7 @@ func (s *Scanner) scanLabel() string {
 			break
 		}
 		s.next()
-		if ch == ')' {
+		if ch == ':' {
 			break
 		}
 	}

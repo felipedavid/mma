@@ -34,34 +34,16 @@ func (p *Parser) appendPseudoInstruction(lit string) {
 
     var instruction string
     switch lits[0] {
-    case "mov":
+    case "li":
         to := lits[1]
         from := lits[2]
-        if to[0] == '(' || from[0] == '(' {
-            fmt.Println("Labels devem ser referenciadas sem parênteses.")
-            os.Exit(1)
-        } else if p.isRegister(to) && p.isRegister(from) {
-            instruction = "add " + to + ", " + from + ", $r0"
-            p.instructions = append(p.instructions, &RInstruction{lit: instruction})
+        if p.isRegister(to) && isStringInt(from) {
+            instruction = "addi " + to + ", $r0, " + from
         } else {
-            if p.isRegister(to) && isMemoryReference(from) {
-                addr, _ := parseInteger(from[1:len(from)-1])
-                instruction = "lw " + to + ", " + strconv.Itoa(int(addr)) + "($0)"
-            } else if isMemoryReference(to) && p.isRegister(from) {
-                addr, _ := parseInteger(to[1:len(to)-1])
-                instruction = "sw " + from + ", " + strconv.Itoa(int(addr)) + "($0)"
-            } else if p.isRegister(to) && p.isLabel(from) {
-                instruction = "lw " + to + ", " + strconv.Itoa(p.symbols[from]) + "($0)"
-            } else if p.isLabel(to) && p.isRegister(from) {
-                instruction = "sw " + from + ", " + strconv.Itoa(p.symbols[to]) + "($0)"
-            } else if p.isRegister(to) && isStringInt(from) {
-                instruction = "addi " + to + ", $r0, " + from
-            } else {
-                fmt.Printf("Formato da instrução \"%v\" é inválido.\n", lit)
-                os.Exit(1)
-            }
-            p.instructions = append(p.instructions, &IInstruction{lit: instruction})
+            fmt.Printf("Formato da instrução \"%v\" é inválido.\n", lit)
+            os.Exit(1)
         }
+        p.instructions = append(p.instructions, &IInstruction{lit: instruction})
     }
 }
 
@@ -90,7 +72,7 @@ loop:
                         Não é possível definir múltiplas labels com o mesmo nome.\n`, lit)
                     os.Exit(1)
                 }
-                p.symbols[lit[1:len(lit)-1]] = len(p.instructions)
+                p.symbols[lit[:len(lit)-1]] = len(p.instructions)
             case R_INSTRUCTION:
                 p.instructions = append(p.instructions, &RInstruction{lit: lit})
             case I_INSTRUCTION:
@@ -105,7 +87,7 @@ loop:
             switch tok{
             case LABEL:
                 lits := strings.Fields(lit)
-                label_name := lits[0][1:len(lits[0])-1]
+                label_name := lits[0][:len(lits[0])-1]
                 if _, ok := p.symbols[label_name]; ok {
                     fmt.Printf(`[!] Label \"%v\" já foi declarada.\n
                     [!] Não é possível definir múltiplas labels com o mesmo nome.\n`, label_name)
@@ -153,6 +135,9 @@ func (p *Parser) parseData(d *Data) {
         }
         d.byte_data = uint16(n)
         return
+    } else {
+        fmt.Printf("Tipo \"%v\" não suportado. No momento apenas o tipo \".word\" é suportado", lits[0])
+        os.Exit(1)
     }
 }
 
@@ -216,35 +201,34 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
 
     var registers []uint16
     registers, lits = p.parseRegisters(lits)
-    fmt.Println(registers)
-    fmt.Println(lits)
-    if len(registers) != 2 {
-        fmt.Printf("[!] ERRO: Instrução \"%v\" deveria referenciar 2 registradores.\n", i.lit)
-        os.Exit(1)
-    }
-
-    if i.op == 3 || i.op == 10 || i.op == 8 {
-        i.rt = registers[0]
-        i.rs = registers[1]
-    } else if (i.op == 4) {
-        i.rt = registers[1]
-        i.rs = registers[0]
+    if len(registers) == 2 && len(lits) == 1 && isStringInt(lits[0]) {
+        if i.op == 3 || i.op == 10 || i.op == 8 {
+            i.rt = registers[0]
+            i.rs = registers[1]
+        } else if (i.op == 4) {
+            i.rt = registers[1]
+            i.rs = registers[0]
+        } else {
+            fmt.Printf("[!] Instrução \"%v\" inválida.", i.lit)
+            os.Exit(1)
+        }
+    } else if len(registers) == 1 && len(lits) == 1 && (i.op == 3 || i.op == 10) {
+        if val, ok := p.symbols[lits[0]]; ok {
+            i.immd = uint16(val)
+            i.rt = registers[0]
+            i.rs = 0
+        } else {
+            fmt.Printf("[!] Label \"%v\" não existe.\n", lits[0])
+            os.Exit(1)
+        }
     } else {
-        fmt.Printf("[!] Instrução \"%v\" inválida.", i.lit)
-        os.Exit(1)
-    }
-
-    fmt.Println(lits)
-    if len(lits) == 1 && isStringInt(lits[0]) {
-        value, _ := parseInteger(lits[0])
-        i.immd = uint16(value)
-    } else {
-        fmt.Printf("[!] Instrução \"%v\" inválida.", i.lit)
+        fmt.Printf("[!] Instrução \"%v\" inválida.\n", i.lit)
         os.Exit(1)
     }
 }
 
 func (p *Parser) parseJInstruction(j *JInstruction) {
+    fmt.Println(p.symbols)
     label := strings.Fields(j.lit)[1]
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
         j.addr = uint16(val)
@@ -286,6 +270,7 @@ func (p *Parser) isRegister(str string) bool {
         return true
     }
 
+    fmt.Printf("Registrador \"%v\" não existe.\n", str)
     return false
 }
 
@@ -304,13 +289,9 @@ func (p *Parser) parseRegisters(lit []string) (registers []uint16, new_lit []str
                 register_id = uint16(p.symbols[strings.ToUpper(v[1:])])
             }
             registers = append(registers, register_id)
-            //if len(lit) > 1 {
-            //    lit = append(lit[:i], lit[i+1]) // remove the register from the slice
-            //}
         } else {
             new_lit = append(new_lit, v)
         }
     }
-    //new_lit = lit
     return
 }
