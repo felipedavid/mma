@@ -5,7 +5,7 @@
   _i: .word 2
   _j: .word 2 
 .text
-  #Carrega os valores das vari�veis nos registradores MEM -> REG
+  #Carrega os valores das variáveis nos registradores MEM -> REG
   lw $r1, _g
   lw $r2, _h
   lw $r3, _i
@@ -17,7 +17,7 @@
   Else:
   sub $r0,$r1,$r2   #se i!=j, f=g-h  
   Exit:
-  #Retorna o valor do resultado para a mem�ria REG -> MEM
+  #Retorna o valor do resultado para a memória REG -> MEM
   sw $r0, _f
   #Termina o programa
   li $r0, 10
