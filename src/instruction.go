@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 type DataInterface interface {
-    BinaryString() string
+    HexString() string
 }
 
 type DataFile struct {
@@ -15,12 +15,13 @@ type Data struct {
     byte_data uint16
 }
 
-func (d *Data) BinaryString() string {
+func (d *Data) HexString() string {
     return fmt.Sprintf("%04x", d.byte_data)
 }
 
 type Instruction interface {
-    BinaryString() string
+    HexString() string
+    printDecode()
 }
 
 type AssemblyFile struct {
@@ -35,13 +36,17 @@ type RInstruction struct {
     funct uint16
 }
 
-func (r *RInstruction) BinaryString() string {
+func (r *RInstruction) HexString() string {
     var bin uint16
     bin |= r.rs << 9
     bin |= r.rt << 6
     bin |= r.rd << 3
     bin |= r.funct
     return fmt.Sprintf("%04x", bin)
+}
+
+func (r *RInstruction) printDecode() {
+    fmt.Printf("%-18v -> %04b %03b %03b %03b %03b -> 0x%v\n", r.lit, 0, r.rs, r.rt, r.rd, r.funct, r.HexString())
 }
 
 type IInstruction struct {
@@ -52,7 +57,7 @@ type IInstruction struct {
     immd uint16
 }
 
-func (i *IInstruction) BinaryString() string {
+func (i *IInstruction) HexString() string {
     var bin uint16
     bin |= i.op << 12
     bin |= i.rs << 9
@@ -61,14 +66,22 @@ func (i *IInstruction) BinaryString() string {
     return fmt.Sprintf("%04x", bin)
 }
 
+func (i *IInstruction) printDecode() {
+    fmt.Printf("%-18v -> %04b %03b %03b %06b -> 0x%v\n", i.lit, i.op, i.rs, i.rt, i.immd, i.HexString())
+}
+
 type JInstruction struct {
     lit string
     addr uint16
 }
 
-func (j *JInstruction) BinaryString() string {
+func (j *JInstruction) HexString() string {
     var bin uint16
     bin |= j.addr
     bin |= 2 << 12;
     return fmt.Sprintf("%04x", bin)
+}
+
+func (j *JInstruction) printDecode() {
+    fmt.Printf("%-18v -> %04b %012b -> 0x%v\n", j.lit, 2, j.addr, j.HexString())
 }

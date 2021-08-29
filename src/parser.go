@@ -61,6 +61,7 @@ loop:
             p.symbols[lit] = len(p.instructions)
             continue
         }
+        lit = strings.TrimSpace(lit)
 
         if ins_or_data == INSTRUCTION {
             switch tok {
@@ -168,8 +169,6 @@ func (p *Parser) parseRInstruction(r *RInstruction) {
 
     var registers []uint16
     registers, lits = p.parseRegisters(lits)
-    fmt.Println(registers)
-    fmt.Println(lits)
     if len(registers) != 3 {
         fmt.Printf("[!] ERRO: Instrução \"%v\" deveria referenciar 3 registradores.\n", r.lit)
         os.Exit(1)
@@ -212,6 +211,8 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
             fmt.Printf("[!] Instrução \"%v\" inválida.", i.lit)
             os.Exit(1)
         }
+        val, _ := parseInteger(lits[0])
+        i.immd = uint16(val)
     } else if len(registers) == 1 && len(lits) == 1 && (i.op == 3 || i.op == 10) {
         if val, ok := p.symbols[lits[0]]; ok {
             i.immd = uint16(val)
@@ -228,7 +229,6 @@ func (p *Parser) parseIInstruction(i *IInstruction) {
 }
 
 func (p *Parser) parseJInstruction(j *JInstruction) {
-    fmt.Println(p.symbols)
     label := strings.Fields(j.lit)[1]
     if val, ok := p.symbols[label]; ok { // if the label is present in the map
         j.addr = uint16(val)

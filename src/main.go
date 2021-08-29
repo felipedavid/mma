@@ -24,7 +24,7 @@ func main() {
         var dataBuffer bytes.Buffer
         dataBuffer.WriteString("v2.0 raw\n")
         for _, i := range dataFile.DataStream {
-            dataBuffer.WriteString(i.BinaryString() + "\n")
+            dataBuffer.WriteString(i.HexString() + "\n")
         }
 	    datFilePath := strings.Replace(asmFilePath, ".m", ".dat", 1)
 	    ioutil.WriteFile(datFilePath, dataBuffer.Bytes(), 0644)
@@ -34,7 +34,8 @@ func main() {
         var instructionBuffer bytes.Buffer
         instructionBuffer.WriteString("v2.0 raw\n")
         for _, i := range assemblyFile.Instructions {
-            instructionBuffer.WriteString(i.BinaryString() + "\n")
+            instructionBuffer.WriteString(i.HexString() + "\n")
+            i.printDecode()
         }
         binFilePath := strings.Replace(asmFilePath, ".m", ".ins", 1)
         ioutil.WriteFile(binFilePath, instructionBuffer.Bytes(), 0644)
