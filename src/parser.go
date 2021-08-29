@@ -94,7 +94,7 @@ loop:
                     [!] Não é possível definir múltiplas labels com o mesmo nome.\n`, label_name)
                     os.Exit(1)
                 }
-                p.symbols[label_name] = len(p.dataStream) + 1
+                p.symbols[label_name] = len(p.dataStream) * 2
                 if len(lits) >= 3 {
                     lits = lits[1:]
                     p.dataStream = append(p.dataStream, &Data{lit: lits[0] + " " + lits[1]})

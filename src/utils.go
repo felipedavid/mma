@@ -2,7 +2,6 @@ package main
 
 import (
     "strconv"
-    "fmt"
 )
 
 func parseInteger(integer string) (value int, err error) {
@@ -18,7 +17,6 @@ func parseInteger(integer string) (value int, err error) {
             return
         }
     }
-    fmt.Println("he");
 
     return
 }
@@ -27,6 +25,13 @@ func isStringInt(str string) bool {
     if _, err := strconv.Atoi(str); err == nil {
         return true
     }
+
+    if len(str) > 2 {
+        if _, err := strconv.ParseInt(str[2:], 16, 16); err == nil {
+            return true
+        }
+    }
+
     return false
 }
 
