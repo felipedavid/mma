@@ -12,13 +12,11 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Uso: ./assembler program.m")
-        os.Exit(1)
-	}
+    debug := flag.Bool("d", false, "executar em modo debugging")
 
     flag.Parse()
     path := flag.Arg(0)
+
     asmData, err := readFile(path)
     if err != nil {
         fmt.Fprintf(os.Stderr, "[!] Falha ao tentar ler arquivo: %s\n", err)
@@ -28,6 +26,15 @@ func main() {
 	var p Parser
 	p.Init(asmData)
 	dataFile, assemblyFile := p.Parse()
+
+    // Se flag de debugging está ativada, printar converções e sair
+    if *debug && len(assemblyFile.Instructions) > 0 {
+        for _, i := range assemblyFile.Instructions {
+            i.printDecode()
+        }
+        fmt.Println()
+        return
+    }
 
     if len(dataFile.DataStream) > 0 {
         var dataBuffer bytes.Buffer
@@ -44,7 +51,6 @@ func main() {
         instructionBuffer.WriteString("v2.0 raw\n")
         for _, i := range assemblyFile.Instructions {
             instructionBuffer.WriteString(i.HexString() + "\n")
-            i.printDecode()
         }
         binFilePath := strings.Replace(path, ".m", ".ins", 1)
         ioutil.WriteFile(binFilePath, instructionBuffer.Bytes(), 0644)
@@ -52,11 +58,7 @@ func main() {
 }
 
 func readFile(path string) ([]byte, error) {
-    if path == "" {
-        return []byte{}, errors.New("selecione um arquivo \".m\"")
-    }
-
-    if filepath.Ext(path) != ".m" {
+    if path == "" || filepath.Ext(path) != ".m" {
         return []byte{}, errors.New("selecione um arquivo \".m\"")
     }
 
