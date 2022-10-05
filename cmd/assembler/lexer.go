@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// charToDigit maps a ASCII character to its actual value on 2-16 numeric bases
 var charToDigit = [256]uint8{
 	'0': 0,
 	'1': 1,
@@ -40,6 +41,8 @@ const (
 
 type TokenKind uint
 
+// Token just assign a meaning to a sequence of characters. It's easier to work with tokens then every time we get
+// a sequence of characters make some sense out of it
 type Token struct {
 	kind   TokenKind
 	intVal int64
@@ -98,6 +101,7 @@ StartOver:
 			}
 			l.current++
 		}
+		// Yes, gotos. This is actually a good use case for them
 		goto StartOver
 	default:
 		if isDigit(l.src[l.current]) {
@@ -112,6 +116,7 @@ StartOver:
 func (l *Lexer) scanInt() (TokenKind, int64) {
 	base := int64(10)
 	startDigits := l.current
+	// Check for binary/hex/octal notations
 	if l.src[l.current] == '0' {
 		l.current++
 		if toLower(l.src[l.current]) == 'x' {
@@ -127,6 +132,8 @@ func (l *Lexer) scanInt() (TokenKind, int64) {
 			startDigits = l.current
 		}
 	}
+
+	// Actually parse the number based adjusting for the base
 	var val int64
 	for l.current < len(l.src) {
 		if l.src[l.current] == '_' {
