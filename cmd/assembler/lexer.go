@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"os"
@@ -63,13 +64,14 @@ type Lexer struct {
 }
 
 // NewLexer just returns a initialized instance of Lexer
-func NewLexer(source []byte) *Lexer {
+func NewLexer(fileName string, source []byte) *Lexer {
 	lex := &Lexer{
+		fileName:   fileName,
 		src:        source,
 		lineNumber: 1,
 		start:      0,
 		current:    0,
-		errLogger:  log.New(os.Stdout, "SYNTAX_ERROR\t", log.LstdFlags),
+		errLogger:  log.New(os.Stdout, "[SYNTAX_ERROR] ", 0),
 	}
 
 	lex.NextToken()
@@ -145,7 +147,7 @@ func (l *Lexer) scanInt() (TokenKind, int64) {
 			break
 		}
 		if digit >= base {
-			l.error("Digit '%v' out of range for base %v", l.src[l.current], base)
+			l.error("Digit '%c' out of range for base %v", l.src[l.current], base)
 			digit = 0
 		}
 		if val > (math.MaxInt64-digit)/base {
@@ -168,5 +170,12 @@ func (l *Lexer) scanInt() (TokenKind, int64) {
 
 // error logs errors while lexing
 func (l *Lexer) error(fmtString string, val ...any) {
-	l.errLogger.Fatalf(fmtString, val...)
+	// Get the whole lexeme to print with the error message
+	lexemeEnd := l.current
+	for !isSpace(l.src[lexemeEnd]) && lexemeEnd < len(l.src) {
+		lexemeEnd++
+	}
+
+	errorMsg := fmt.Sprintf(fmtString, val...)
+	l.errLogger.Printf("[Line %d] [Lexeme '%s'] %s", l.lineNumber, l.src[l.start:lexemeEnd], errorMsg)
 }
