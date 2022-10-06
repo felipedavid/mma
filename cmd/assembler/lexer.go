@@ -135,6 +135,7 @@ StartOver:
 			}
 			l.current++
 		}
+		l.start = l.current
 		// Yes, gotos. This is actually a good use case for them
 		goto StartOver
 	default:
