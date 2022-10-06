@@ -33,12 +33,33 @@ var charToDigit = [256]uint8{
 	'F': 15,
 }
 
+var escapeToChar = [256]byte{
+	'\'': '\'',
+	'"':  '"',
+	'\\': '\\',
+	'n':  '\n',
+	'r':  '\r',
+	't':  '\t',
+	'v':  '\v',
+	'b':  '\b',
+	'a':  '\a',
+	'0':  0,
+}
+
 const (
 	None = iota
 	Identifier
 	Integer
+	String
 	End
 )
+
+var TokenKindToString = []string{
+	None:    "None",
+	Integer: "Integer",
+	String:  "String",
+	End:     "End",
+}
 
 type TokenKind uint
 
@@ -47,6 +68,17 @@ type TokenKind uint
 type Token struct {
 	kind   TokenKind
 	intVal int64
+	strVal []byte
+}
+
+func (t *Token) GetValue() any {
+	switch t.kind {
+	case Integer:
+		return t.intVal
+	case String:
+		return string(t.strVal)
+	}
+	return nil
 }
 
 // Lexer takes a byte stream and transform it in a Token stream
@@ -112,6 +144,112 @@ StartOver:
 	}
 
 	l.start = l.current
+}
+
+func (l *Lexer) scanString() {
+	l.current++
+	buf := make([]byte, 0, 16)
+	if l.src[0] == '"' && l.src[1] == '"' {
+		l.current++
+		for l.current < len(l.src) {
+			if l.src[0] == '"' && l.src[1] == '"' && l.src[2] == '"' {
+				l.current += 3
+				break
+			}
+			if l.src[l.current] != '\r' {
+				buf = append(buf, l.src[l.current])
+			}
+			if l.src[l.current] == '\n' {
+				l.lineNumber++
+			}
+			l.current++
+		}
+		if l.current < len(l.src) {
+			l.error("Unexpected end of file within multi-line string literal")
+		}
+	} else {
+		for l.current < len(l.src) && l.src[l.current] != '"' {
+			val := l.src[l.current]
+			if val == '\n' {
+				l.error("String literal cannot contain newline")
+				break
+			} else if val == '\\' {
+				l.current++
+				if l.src[l.current] == 'x' {
+					val = byte(l.scanHexEscape())
+				} else {
+					val = escapeToChar[l.src[l.current]]
+					if val == 0 && l.src[l.current] != '0' {
+						l.error("Invalid string literal escape '\\%c'", l.src[l.current])
+					}
+					l.current++
+				}
+			} else {
+				l.current++
+			}
+			buf = append(buf, val)
+		}
+		if l.current < len(l.src) {
+			l.current++
+		} else {
+			l.error("Unexpected end of file within string literal")
+		}
+	}
+
+	l.Token.kind = String
+	l.Token.strVal = buf
+}
+
+func (l *Lexer) scanChar() {
+	l.current++
+	val := byte(0)
+	if l.src[l.current] == '\'' {
+		l.error("Char literal cannot be empty")
+		l.current++
+	} else if l.src[l.current] == '\n' {
+		l.error("Char literal cannot contain newline")
+	} else if l.src[l.current] == '\\' {
+		l.current++
+		if l.src[l.current] == 'x' {
+			val = byte(l.scanHexEscape())
+		} else {
+			val = escapeToChar[l.src[l.current]]
+			if val == 0 && l.src[l.current] != '0' {
+				l.error("Invalid char literal escape '\\%c'", l.src[l.current])
+			}
+			l.current++
+		}
+	} else {
+		val = l.src[l.current]
+		l.current++
+	}
+	if l.src[l.current] != '\'' {
+		l.error("Expected closing char quote, got '%c'", l.src[l.current])
+	} else {
+		l.current++
+	}
+	l.Token.kind = Integer
+	l.Token.intVal = int64(val)
+}
+
+func (l *Lexer) scanHexEscape() int {
+	l.current++
+	val := int(charToDigit[l.src[l.current]])
+	if val == 0 && l.src[l.current] != '0' {
+		l.error("\\x needs at least 1 hex digit")
+	}
+	l.current++
+	digit := charToDigit[l.src[l.current]]
+	if digit != 0 || l.src[l.current] == '0' {
+		val *= 16
+		val += int(digit)
+		if val > 0xFF {
+			l.error("\\x argument out of range")
+			val = 0xFF
+		}
+		l.current++
+	}
+	return val
 }
 
 // scanInt parses integers from base 2, 8, 10 and 16
