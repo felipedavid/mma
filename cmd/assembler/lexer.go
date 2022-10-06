@@ -160,7 +160,7 @@ StartOver:
 		l.scanInt()
 	case '"':
 		l.scanString()
-	case '\\':
+	case '\'':
 		l.scanChar()
 	default:
 	}
