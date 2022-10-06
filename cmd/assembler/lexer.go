@@ -138,10 +138,31 @@ StartOver:
 		l.start = l.current
 		// Yes, gotos. This is actually a good use case for them
 		goto StartOver
+	case '0':
+		fallthrough
+	case '1':
+		fallthrough
+	case '2':
+		fallthrough
+	case '3':
+		fallthrough
+	case '4':
+		fallthrough
+	case '5':
+		fallthrough
+	case '6':
+		fallthrough
+	case '7':
+		fallthrough
+	case '8':
+		fallthrough
+	case '9':
+		l.scanInt()
+	case '"':
+		l.scanString()
+	case '\\':
+		l.scanChar()
 	default:
-		if isDigit(l.src[l.current]) {
-			l.Token.kind, l.Token.intVal = l.scanInt()
-		}
 	}
 
 	l.start = l.current
@@ -254,7 +275,9 @@ func (l *Lexer) scanHexEscape() int {
 }
 
 // scanInt parses integers from base 2, 8, 10 and 16
-func (l *Lexer) scanInt() (TokenKind, int64) {
+func (l *Lexer) scanInt() {
+	l.Token.kind = Integer
+
 	base := int64(10)
 	startDigits := l.current
 	// Check for binary/hex/octal notations
@@ -304,7 +327,7 @@ func (l *Lexer) scanInt() (TokenKind, int64) {
 		l.error("Expected base %v digit, got '%v'", base, l.src[l.current])
 	}
 
-	return Integer, val
+	l.Token.intVal = val
 }
 
 // error logs errors while lexing
