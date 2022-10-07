@@ -7,6 +7,42 @@ import (
 	"os"
 )
 
+var registerIdentifiers = map[string]int64{
+	"$0":  0,
+	"$1":  1,
+	"$2":  2,
+	"$3":  3,
+	"$4":  4,
+	"$5":  5,
+	"$6":  6,
+	"$7":  7,
+	"$8":  8,
+	"$9":  9,
+	"$10": 10,
+	"$11": 11,
+	"$12": 12,
+	"$13": 13,
+	"$14": 14,
+	"$15": 15,
+	"$16": 16,
+	"$v0": 2,
+	"$v1": 3,
+	"$a0": 4,
+	"$a1": 5,
+	"$a2": 6,
+	"$a3": 7,
+	"$t0": 8,
+	"$t1": 9,
+	"$t2": 10,
+	"$t3": 11,
+	"$t4": 12,
+	"$t5": 13,
+	"$t6": 14,
+	"$t7": 15,
+	"$s0": 16,
+	// TODO: Study the architecture and map the $sp identifier
+}
+
 // charToDigit maps a ASCII character to its actual value on 2-16 numeric bases
 var charToDigit = [256]uint8{
 	'0': 0,
@@ -52,6 +88,9 @@ const (
 	TokenInteger
 	TokenString
 	TokenDivOp
+	TokenNewLine
+	TokenDollar
+	TokenRegister
 	End
 )
 
@@ -61,6 +100,9 @@ var TokenKindToString = []string{
 	TokenInteger:    "TokenInteger",
 	TokenString:     "TokenString",
 	TokenDivOp:      "TokenDivOp",
+	TokenNewLine:    "TokenNewLine",
+	TokenDollar:     "TokenDollar",
+	TokenRegister:   "TokenRegister",
 	End:             "End",
 }
 
@@ -69,9 +111,11 @@ type TokenKind uint
 // Token just assign a meaning to a sequence of characters. It's easier to work with tokens then every time we get
 // a sequence of characters make some sense out of it
 type Token struct {
-	kind   TokenKind
+	kind TokenKind
+
 	intVal int64
 	strVal []byte
+	val    any
 }
 
 func (t *Token) GetValue() any {
@@ -82,6 +126,8 @@ func (t *Token) GetValue() any {
 		fallthrough
 	case TokenString:
 		return string(t.strVal)
+	case TokenRegister:
+		return t.intVal
 	}
 	return nil
 }
@@ -101,7 +147,7 @@ type Lexer struct {
 }
 
 // NewLexer just returns a initialized instance of Lexer
-func NewLexer(fileName string, source []byte) *Lexer {
+func newLexer(fileName string, source []byte) *Lexer {
 	lex := &Lexer{
 		fileName:   fileName,
 		src:        source,
@@ -124,6 +170,16 @@ func (l *Lexer) NextToken() {
 
 StartOver:
 	switch l.src[l.current] {
+	case '$':
+		l.scanIdentifier()
+		if val, isRegister := registerIdentifiers[string(l.Token.strVal)]; isRegister {
+			l.Token.intVal = val
+			l.Token.kind = TokenRegister
+		} else {
+			l.lineStart = l.current
+			l.Token.kind = TokenDollar
+			l.current = l.start + 1
+		}
 	case ' ':
 		fallthrough
 	case '\t':
@@ -269,29 +325,15 @@ StartOver:
 		fallthrough
 	case 'Y':
 		fallthrough
-	case fallthrough
-	case 'g':
-		fallthrough
-	case 'h':
-		fallthrough
-	casefallthrough
-	case 'g':
-		fallthrough
-	case 'h':
-		fallthrough
-	case'Z':
-		l.current++
-		for isAlphaNumeric(l.src[l.current]) || l.src[l.current] == '_' {
-			l.current++
-		}
-		l.Token.strVal = l.src[l.start:l.current]
-		l.Token.kind = TokenIdentifier
+	case 'Z':
+		l.scanIdentifier()
 	case '/':
 		l.current++
 		if l.src[l.current] == '/' { // Check if it is a one line comment
 			for l.current < len(l.src) && l.src[l.current] != '\n' {
 				l.current++
 			}
+			l.current++
 			l.start = l.current
 			goto StartOver
 		} else if l.src[l.current] == '*' { // Check if it is a multi-line comment
@@ -313,6 +355,15 @@ StartOver:
 	}
 
 	l.start = l.current
+}
+
+func (l *Lexer) scanIdentifier() {
+	l.current++
+	for isAlphaNumeric(l.src[l.current]) || l.src[l.current] == '_' {
+		l.current++
+	}
+	l.Token.strVal = l.src[l.start:l.current]
+	l.Token.kind = TokenIdentifier
 }
 
 func (l *Lexer) scanString() {
