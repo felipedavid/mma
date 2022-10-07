@@ -18,3 +18,7 @@ func toLower(b byte) byte {
 	}
 	return b + 32
 }
+
+func isAlphaNumeric(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || isDigit(b)
+}
