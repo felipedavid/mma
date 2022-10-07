@@ -75,7 +75,9 @@ func (t *Token) GetValue() any {
 	switch t.kind {
 	case Integer:
 		return t.intVal
-	case String:
+	case TokenIdentifier:
+		fallthrough
+	case TokenString:
 		return string(t.strVal)
 	}
 	return nil
@@ -162,6 +164,146 @@ StartOver:
 		l.scanString()
 	case '\'':
 		l.scanChar()
+	case 'a':
+		fallthrough
+	case 'b':
+		fallthrough
+	case 'c':
+		fallthrough
+	case 'd':
+		fallthrough
+	case 'e':
+		fallthrough
+	case 'f':
+		fallthrough
+	case 'g':
+		fallthrough
+	case 'h':
+		fallthrough
+	case 'i':
+		fallthrough
+	case 'j':
+		fallthrough
+	case 'k':
+		fallthrough
+	case 'l':
+		fallthrough
+	case 'm':
+		fallthrough
+	case 'n':
+		fallthrough
+	case 'o':
+		fallthrough
+	case 'p':
+		fallthrough
+	case 'q':
+		fallthrough
+	case 'r':
+		fallthrough
+	case 's':
+		fallthrough
+	case 't':
+		fallthrough
+	case 'u':
+		fallthrough
+	case 'v':
+		fallthrough
+	case 'w':
+		fallthrough
+	case 'x':
+		fallthrough
+	case 'y':
+		fallthrough
+	case 'z':
+		fallthrough
+	case 'A':
+		fallthrough
+	case 'B':
+		fallthrough
+	case 'C':
+		fallthrough
+	case 'D':
+		fallthrough
+	case 'E':
+		fallthrough
+	case 'F':
+		fallthrough
+	case 'G':
+		fallthrough
+	case 'H':
+		fallthrough
+	case 'I':
+		fallthrough
+	case 'J':
+		fallthrough
+	case 'K':
+		fallthrough
+	case 'L':
+		fallthrough
+	case 'M':
+		fallthrough
+	case 'N':
+		fallthrough
+	case 'O':
+		fallthrough
+	case 'P':
+		fallthrough
+	case 'Q':
+		fallthrough
+	case 'R':
+		fallthrough
+	case 'S':
+		fallthrough
+	case 'T':
+		fallthrough
+	case 'U':
+		fallthrough
+	case 'V':
+		fallthrough
+	case 'W':
+		fallthrough
+	case 'X':
+		fallthrough
+	case 'Y':
+		fallthrough
+	case fallthrough
+	case 'g':
+		fallthrough
+	case 'h':
+		fallthrough
+	casefallthrough
+	case 'g':
+		fallthrough
+	case 'h':
+		fallthrough
+	case'Z':
+		l.current++
+		for isAlphaNumeric(l.src[l.current]) || l.src[l.current] == '_' {
+			l.current++
+		}
+		l.Token.strVal = l.src[l.start:l.current]
+		l.Token.kind = TokenIdentifier
+	case '/':
+		l.current++
+		if l.src[l.current] == '/' { // Check if it is a one line comment
+			for l.current < len(l.src) && l.src[l.current] != '\n' {
+				l.current++
+			}
+			l.start = l.current
+			goto StartOver
+		} else if l.src[l.current] == '*' { // Check if it is a multi-line comment
+			for l.current < len(l.src) {
+				if l.src[l.current] == '*' && l.src[l.current+1] == '/' {
+					l.current += 2
+					l.start = l.current
+					goto StartOver
+				}
+				l.current++
+			}
+			l.error("Unterminated multi-line comment")
+		} else {
+			l.Token.kind = TokenDivOp
+		}
 	default:
 	}
 
