@@ -476,7 +476,7 @@ func (l *Lexer) scanInt() {
 func (l *Lexer) error(fmtString string, val ...any) {
 	// Get the whole lexeme to print with the error message
 	lexemeEnd := l.current
-	for !isSpace(l.src[lexemeEnd]) && lexemeEnd < len(l.src) {
+	for lexemeEnd < len(l.src) && !isSpace(l.src[lexemeEnd]) {
 		lexemeEnd++
 	}
 
