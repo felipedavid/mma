@@ -48,17 +48,20 @@ var escapeToChar = [256]byte{
 
 const (
 	None = iota
-	Identifier
-	Integer
-	String
+	TokenIdentifier
+	TokenInteger
+	TokenString
+	TokenDivOp
 	End
 )
 
 var TokenKindToString = []string{
-	None:    "None",
-	Integer: "Integer",
-	String:  "String",
-	End:     "End",
+	None:            "None",
+	TokenIdentifier: "TokenIdentifier",
+	TokenInteger:    "TokenInteger",
+	TokenString:     "TokenString",
+	TokenDivOp:      "TokenDivOp",
+	End:             "End",
 }
 
 type TokenKind uint
@@ -73,7 +76,7 @@ type Token struct {
 
 func (t *Token) GetValue() any {
 	switch t.kind {
-	case Integer:
+	case TokenInteger:
 		return t.intVal
 	case TokenIdentifier:
 		fallthrough
@@ -360,7 +363,7 @@ func (l *Lexer) scanString() {
 		}
 	}
 
-	l.Token.kind = String
+	l.Token.kind = TokenString
 	l.Token.strVal = buf
 }
 
@@ -392,7 +395,7 @@ func (l *Lexer) scanChar() {
 	} else {
 		l.current++
 	}
-	l.Token.kind = Integer
+	l.Token.kind = TokenInteger
 	l.Token.intVal = int64(val)
 }
 
@@ -418,7 +421,7 @@ func (l *Lexer) scanHexEscape() int {
 
 // scanInt parses integers from base 2, 8, 10 and 16
 func (l *Lexer) scanInt() {
-	l.Token.kind = Integer
+	l.Token.kind = TokenInteger
 
 	base := int64(10)
 	startDigits := l.current
@@ -481,5 +484,5 @@ func (l *Lexer) error(fmtString string, val ...any) {
 	}
 
 	errorMsg := fmt.Sprintf(fmtString, val...)
-	l.errLogger.Printf("[Line %d] [Lexeme '%s'] %s", l.lineNumber, l.src[l.start:lexemeEnd], errorMsg)
+	l.errLogger.Printf("[Line %d] [Lexeme: %s] %s", l.lineNumber, l.src[l.start:lexemeEnd], errorMsg)
 }
