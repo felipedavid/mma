@@ -300,6 +300,8 @@ StartOver:
 					l.current += 2
 					l.start = l.current
 					goto StartOver
+				} else if l.src[l.current] == '\n' {
+					l.lineNumber++
 				}
 				l.current++
 			}
