@@ -184,21 +184,20 @@ StartOver:
 		fallthrough
 	case '\t':
 		fallthrough
-	case '\n':
-		fallthrough
 	case '\r':
 		fallthrough
 	case '\v':
 		for isSpace(l.src[l.current]) {
-			if l.src[l.current] == '\n' {
-				l.lineStart = l.current + 1
-				l.lineNumber++
-			}
 			l.current++
 		}
 		l.start = l.current
 		// Yes, gotos. This is actually a good use case for them
 		goto StartOver
+	case '\n':
+		l.current++
+		l.lineStart = l.current
+		l.Token.kind = TokenNewLine
+		l.lineNumber++
 	case '0':
 		fallthrough
 	case '1':
