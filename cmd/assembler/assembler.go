@@ -10,9 +10,22 @@ const (
 	TokenName
 	TokenNumber
 	TokenString
+	TokenRegister
+	TokenNewLine
+	TokenComma
 )
 
 type TokenKind uint8
+
+var kindStr = []string{
+	None:          "None",
+	TokenName:     "TokenName",
+	TokenNumber:   "TokenNumber",
+	TokenString:   "TokenString",
+	TokenRegister: "TokenRegister",
+	TokenNewLine:  "TokenNewLine",
+	TokenComma:    "TokenComma",
+}
 
 type Token struct {
 	kind TokenKind
@@ -34,6 +47,10 @@ func newAssembler(filename string, source []byte) *Assembler {
 	asm := &Assembler{
 		filename: filename,
 		source:   source,
+
+		start:   0,
+		current: 0,
+		line:    1,
 	}
 	asm.nextToken()
 	return asm
@@ -57,7 +74,22 @@ func (a *Assembler) advance() byte {
 	return ch
 }
 
+var regNameToValue = map[string]uint16{
+	"$zero": 0,
+	"$0":    0,
+	"$1":    1,
+	"$2":    2,
+	"$3":    3,
+	"$4":    4,
+	"$5":    5,
+	"$6":    6,
+	"$7":    7,
+}
+
 func (a *Assembler) nextToken() {
+	a.token.kind = None
+	a.token.val = nil
+
 startOver:
 	a.start = a.current
 	ch := a.advance()
@@ -75,8 +107,24 @@ startOver:
 			a.advance()
 		}
 		goto startOver
+	case ch == '$':
+		for isAlphaNumeric(a.peek()) {
+			a.advance()
+		}
+		regName := string(a.source[a.start:a.current])
+		if val, isValidRegister := regNameToValue[regName]; isValidRegister {
+			a.token.kind = TokenRegister
+			a.token.val = val
+		} else {
+			a.error("%s is not a valid register", regName)
+		}
+	case ch == '\n':
+		a.token.kind = TokenNewLine
+		a.line++
+	case ch == ',':
+		a.token.kind = TokenComma
 	default:
-		a.error("Unknown character: %c\n", ch)
+		a.error("Unknown character: '%c'\n", ch)
 	}
 	a.start = a.current
 }
@@ -257,5 +305,5 @@ func (a *Assembler) scanNumber() {
 
 func (a *Assembler) error(fmtString string, val ...any) {
 	errMsg := fmt.Sprintf(fmtString, val...)
-	fmt.Printf("[line %d] %s", a.line, errMsg)
+	fmt.Printf("Error on line %d: %s\n", a.line, errMsg)
 }
