@@ -10,9 +10,22 @@ const (
 	TokenName
 	TokenNumber
 	TokenString
+	TokenRegister
+	TokenNewLine
+	TokenComma
 )
 
 type TokenKind uint8
+
+var kindStr = []string{
+	None:          "None",
+	TokenName:     "TokenName",
+	TokenNumber:   "TokenNumber",
+	TokenString:   "TokenString",
+	TokenRegister: "TokenRegister",
+	TokenNewLine:  "TokenNewLine",
+	TokenComma:    "TokenComma",
+}
 
 type Token struct {
 	kind TokenKind
