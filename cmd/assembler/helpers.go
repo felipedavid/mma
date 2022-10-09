@@ -1,7 +1,7 @@
 package main
 
 func isWhiteSpace(ch byte) bool {
-	return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\v'
+	return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\v' || ch == '\n'
 }
 
 func isDigit(ch byte) bool {
