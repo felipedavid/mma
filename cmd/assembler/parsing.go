@@ -229,7 +229,7 @@ func (a *Assembler) parseLine() {
 		sym := a.parseSymbol()
 		switch sym.kind {
 		case SymbolInstr:
-			fmt.Printf("Instruction: %s\n", sym.name)
+			a.parseInstruction(sym)
 		}
 	}
 	a.parseNewlines()
