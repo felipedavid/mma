@@ -13,18 +13,22 @@ const (
 	TokenRegister
 	TokenNewLine
 	TokenComma
+	TokenLeftParen
+	TokenRightParen
 )
 
 type TokenKind uint8
 
 var kindStr = []string{
-	TokenNone:     "None",
-	TokenName:     "TokenName",
-	TokenNumber:   "TokenNumber",
-	TokenString:   "TokenString",
-	TokenRegister: "TokenRegister",
-	TokenNewLine:  "TokenNewLine",
-	TokenComma:    "TokenComma",
+	TokenNone:       "None",
+	TokenName:       "TokenName",
+	TokenNumber:     "TokenNumber",
+	TokenString:     "TokenString",
+	TokenRegister:   "TokenRegister",
+	TokenNewLine:    "TokenNewLine",
+	TokenComma:      "TokenComma",
+	TokenLeftParen:  "TokenLeftParen",
+	TokenRightParen: "TokenRightParen",
 }
 
 type Token struct {
