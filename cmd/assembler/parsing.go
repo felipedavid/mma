@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	SymbolNone = iota
@@ -34,11 +36,9 @@ const (
 	SubOp
 )
 
-type Op uint8
-
 type InstrDef struct {
 	kind InstrKind
-	op   Op
+	op   uint16
 }
 
 type Symbol struct {
@@ -135,6 +135,92 @@ func (a *Assembler) expectToken(kind TokenKind) bool {
 func (a *Assembler) parseNewlines() {
 	for a.matchToken(TokenNewLine) {
 	}
+}
+
+func (a *Assembler) parseRegister() uint16 {
+	if a.isToken(TokenRegister) {
+		if val, isUint16 := a.token.val.(uint16); isUint16 {
+			a.nextToken()
+			return val
+		} else {
+			a.parserError("Val should be uint16, not %T", val)
+		}
+	}
+	return 0
+}
+
+func (a *Assembler) parseConst() uint16 {
+	return 0
+}
+
+func (a *Assembler) parseAddress() uint16 {
+	return 0
+}
+
+type Instruction struct {
+	op, rd, rs, rt, immd, addr uint16
+}
+
+func (a *Assembler) assemble(instr Instruction) {
+	rd := bits(instr.rd, 0, 3)
+	rs := bits(instr.rs, 0, 3)
+	rt := bits(instr.rt, 0, 3)
+	immd := bits(instr.immd, 0, 6)
+	//addr := bits(instr.immd, 0, 12)
+
+	var binInstr uint16
+	var op uint16
+	var funct uint16
+
+	switch instr.op {
+	case LwOp:
+		op = 3
+		binInstr |= op << 12
+		binInstr |= rs << 9
+		binInstr |= rt << 6
+		binInstr |= immd
+	case AddOp:
+		op = 0
+		funct = 0
+		binInstr |= op << 12
+		binInstr |= rs << 9
+		binInstr |= rt << 6
+		binInstr |= rd << 3
+		binInstr |= funct
+		fmt.Printf("-> %016b", binInstr)
+	}
+}
+
+func (a *Assembler) parseInstruction(sym Symbol) {
+	instrDef, ok := sym.val.(InstrDef)
+	if !ok {
+		a.parserError("Symbol '%s' does not have value of the right type. Value should have value '%T'", sym.name, sym.val)
+		return
+	}
+
+	var instr Instruction
+	instr.op = instrDef.op
+
+	switch instrDef.kind {
+	case InstrRKind:
+		instr.rd = a.parseRegister()
+		a.expectToken(TokenComma)
+		instr.rs = a.parseRegister()
+		a.expectToken(TokenComma)
+		instr.rt = a.parseRegister()
+	case InstrIKind:
+		instr.rt = a.parseRegister()
+		a.expectToken(TokenComma)
+		instr.immd = a.parseConst()
+		a.expectToken(TokenLeftParen)
+		instr.rs = a.parseRegister()
+	case InstrJKind:
+		instr.addr = a.parseAddress()
+	default:
+		a.parserError("Could not parse instruction. The instruction class does not exist.")
+		return
+	}
+	a.assemble(instr)
 }
 
 func (a *Assembler) parseLine() {
