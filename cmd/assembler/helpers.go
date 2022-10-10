@@ -31,3 +31,7 @@ func toLower(ch byte) byte {
 	}
 	return ch
 }
+
+func bits(data, start, lenn uint16) uint16 {
+	return (data >> start) & ((1 << lenn) - 1)
+}
