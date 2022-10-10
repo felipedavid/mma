@@ -34,6 +34,9 @@ var kindStr = []string{
 type Token struct {
 	kind TokenKind
 	val  any
+
+	start  int
+	finish int
 }
 
 func (a *Assembler) isAtEnd() bool {
@@ -87,6 +90,7 @@ startOver:
 	case ch == '"':
 		a.scanString()
 	case isWhiteSpace(ch):
+		a.current--
 		newline := false
 		for isWhiteSpace(a.peek()) {
 			if a.peek() == '\n' {
@@ -113,10 +117,16 @@ startOver:
 		}
 	case ch == ',':
 		a.token.kind = TokenComma
+	case ch == '(':
+		a.token.kind = TokenLeftParen
+	case ch == ')':
+		a.token.kind = TokenRightParen
 	default:
 		a.lexError("Unknown character: '%c'\n", ch)
 	}
+	a.token.start = a.start
 	a.start = a.current
+	a.token.finish = a.current
 }
 
 func (a *Assembler) scanName() {
@@ -162,6 +172,7 @@ var escapeToChar = [256]byte{
 }
 
 func (a *Assembler) scanString() {
+	a.advance()
 	buf := make([]byte, 0, 16)
 	if a.source[0] == '"' && a.source[1] == '"' {
 		a.advance()
@@ -240,6 +251,7 @@ var charToDigit = [256]byte{
 }
 
 func (a *Assembler) scanNumber() {
+	a.current--
 	base := 10
 	startDigits := a.current
 	// Check for binary/hex/octal notations

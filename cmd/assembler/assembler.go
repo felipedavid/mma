@@ -13,6 +13,9 @@ type Assembler struct {
 	address int
 
 	symbols map[string]Symbol
+
+	dataSection []byte
+	codeSection []byte
 }
 
 func newAssembler(filename string, source []byte) *Assembler {

@@ -67,6 +67,16 @@ var Symbols = map[string]Symbol{
 	".uint8":  {".uint8", SymbolCmd, cmdUint8},
 	".uint16": {".uint16", SymbolCmd, cmdUint16},
 	".uint32": {".uint32", SymbolCmd, cmdUint32},
+
+	// Regs
+	"$0": {"$0", SymbolReg, uint16(0)},
+	"$1": {"$1", SymbolReg, uint16(1)},
+	"$2": {"$2", SymbolReg, uint16(2)},
+	"$3": {"$3", SymbolReg, uint16(3)},
+	"$4": {"$4", SymbolReg, uint16(4)},
+	"$5": {"$5", SymbolReg, uint16(5)},
+	"$6": {"$6", SymbolReg, uint16(6)},
+	"$7": {"$7", SymbolReg, uint16(7)},
 }
 
 func cmdUint8() {
@@ -82,12 +92,10 @@ func cmdUint32() {
 }
 
 func (a *Assembler) parseName() string {
-	name := a.token.val
-	a.expectToken(TokenName)
-	if val, ok := name.(string); ok {
-		return val
-	}
-	return ""
+	name := string(a.source[a.token.start:a.token.finish])
+	//a.expectToken(TokenName)
+	a.nextToken()
+	return name
 }
 
 func (a *Assembler) parseSymbol() Symbol {
@@ -128,7 +136,7 @@ func (a *Assembler) expectToken(kind TokenKind) bool {
 		a.nextToken()
 		return true
 	}
-	a.parserError("Expected %s, got %s")
+	a.parserError("Expected %s, got %s", kindStr[kind], kindStr[a.token.kind])
 	return false
 }
 
@@ -138,19 +146,27 @@ func (a *Assembler) parseNewlines() {
 }
 
 func (a *Assembler) parseRegister() uint16 {
-	if a.isToken(TokenRegister) {
-		if val, isUint16 := a.token.val.(uint16); isUint16 {
-			a.nextToken()
-			return val
-		} else {
-			a.parserError("Val should be uint16, not %T", val)
-		}
+	sym := a.parseSymbol()
+	if sym.kind != SymbolReg {
+		a.parserError("Expected register bug got '%s'", sym.name)
+		return 0
 	}
-	return 0
+
+	val, isUint16 := sym.val.(uint16)
+	if !isUint16 {
+		a.parserError("Val should be uint16, not %T", val)
+	}
+	return val
 }
 
 func (a *Assembler) parseConst() uint16 {
-	return 0
+	val, isUint16 := a.token.val.(int)
+	if !isUint16 {
+		return 0
+	}
+	a.nextToken()
+
+	return uint16(val)
 }
 
 func (a *Assembler) parseAddress() uint16 {
@@ -161,34 +177,33 @@ type Instruction struct {
 	op, rd, rs, rt, immd, addr uint16
 }
 
-func (a *Assembler) assemble(instr Instruction) {
-	rd := bits(instr.rd, 0, 3)
-	rs := bits(instr.rs, 0, 3)
-	rt := bits(instr.rt, 0, 3)
+func (a *Assembler) encodeInstruction(instr Instruction) uint16 {
+	rs := bits(instr.rs, 0, 3) << 9
+	rt := bits(instr.rt, 0, 3) << 6
+	rd := bits(instr.rd, 0, 3) << 3
 	immd := bits(instr.immd, 0, 6)
 	//addr := bits(instr.immd, 0, 12)
 
-	var binInstr uint16
 	var op uint16
 	var funct uint16
 
 	switch instr.op {
 	case LwOp:
-		op = 3
-		binInstr |= op << 12
-		binInstr |= rs << 9
-		binInstr |= rt << 6
-		binInstr |= immd
+		op = 3 << 12
+		return op | rs | rt | immd
 	case AddOp:
-		op = 0
+		op = 0 << 12
 		funct = 0
-		binInstr |= op << 12
-		binInstr |= rs << 9
-		binInstr |= rt << 6
-		binInstr |= rd << 3
-		binInstr |= funct
-		fmt.Printf("-> %016b", binInstr)
+		return op | rs | rt | rd | funct
 	}
+	return 0
+}
+
+func (a *Assembler) assembleInstruction(encodedInstr uint16) {
+	high := uint8(bits(encodedInstr, 8, 8))
+	low := uint8(bits(encodedInstr, 0, 8))
+	a.codeSection = append(a.codeSection, high)
+	a.codeSection = append(a.codeSection, low)
 }
 
 func (a *Assembler) parseInstruction(sym Symbol) {
@@ -214,13 +229,15 @@ func (a *Assembler) parseInstruction(sym Symbol) {
 		instr.immd = a.parseConst()
 		a.expectToken(TokenLeftParen)
 		instr.rs = a.parseRegister()
+		a.expectToken(TokenRightParen)
 	case InstrJKind:
 		instr.addr = a.parseAddress()
 	default:
 		a.parserError("Could not parse instruction. The instruction class does not exist.")
 		return
 	}
-	a.assemble(instr)
+
+	a.assembleInstruction(a.encodeInstruction(instr))
 }
 
 func (a *Assembler) parseLine() {
@@ -245,4 +262,12 @@ func (a *Assembler) parseFile() {
 func (a *Assembler) parserError(fmtString string, val ...any) {
 	errorMsg := fmt.Sprintf(fmtString, val...)
 	fmt.Printf("Parsing error at line %d: %s\n", a.line, errorMsg)
+}
+
+func (a *Assembler) getCodeSectionStr() string {
+	var buf string
+	for i := 0; i < len(a.codeSection); i += 2 {
+		buf += fmt.Sprintf("%08b%08b\n", a.codeSection[i], a.codeSection[i+1])
+	}
+	return buf
 }
