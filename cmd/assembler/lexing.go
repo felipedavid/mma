@@ -5,6 +5,8 @@ import (
 	"math"
 )
 
+const Eof = 0
+
 const (
 	TokenNone = iota
 	TokenName
@@ -79,7 +81,7 @@ func (a *Assembler) nextToken() {
 
 startOver:
 	a.start = a.current
-	ch := a.advance()
+	ch := a.peek()
 	switch {
 	case ch >= 'A' && ch <= 'Z':
 		fallthrough
@@ -90,7 +92,6 @@ startOver:
 	case ch == '"':
 		a.scanString()
 	case isWhiteSpace(ch):
-		a.current--
 		newline := false
 		for isWhiteSpace(a.peek()) {
 			if a.peek() == '\n' {
@@ -105,6 +106,7 @@ startOver:
 			goto startOver
 		}
 	case ch == '$':
+		a.advance()
 		for isAlphaNumeric(a.peek()) {
 			a.advance()
 		}
@@ -117,10 +119,15 @@ startOver:
 		}
 	case ch == ',':
 		a.token.kind = TokenComma
+		a.advance()
 	case ch == '(':
 		a.token.kind = TokenLeftParen
+		a.advance()
 	case ch == ')':
 		a.token.kind = TokenRightParen
+		a.advance()
+	case ch == Eof:
+		return
 	default:
 		a.lexError("Unknown character: '%c'\n", ch)
 	}
@@ -251,7 +258,6 @@ var charToDigit = [256]byte{
 }
 
 func (a *Assembler) scanNumber() {
-	a.current--
 	base := 10
 	startDigits := a.current
 	// Check for binary/hex/octal notations
@@ -307,5 +313,5 @@ func (a *Assembler) scanNumber() {
 
 func (a *Assembler) lexError(fmtString string, val ...any) {
 	errMsg := fmt.Sprintf(fmtString, val...)
-	fmt.Printf("Scanning error on line %d: %s\n", a.line, errMsg)
+	fmt.Printf("Lexing error on line %d: %s\n", a.line, errMsg)
 }

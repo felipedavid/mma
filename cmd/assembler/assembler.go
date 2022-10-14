@@ -10,7 +10,7 @@ type Assembler struct {
 	current int
 	line    int
 	pass    int
-	address int
+	address uint16
 
 	symbols map[string]Symbol
 
@@ -31,4 +31,13 @@ func newAssembler(filename string, source []byte) *Assembler {
 	}
 	asm.nextToken()
 	return asm
+}
+
+func (a *Assembler) setSource(src []byte) {
+	a.source = src
+	a.start = 0
+	a.current = 0
+	a.line = 1
+	a.codeSection = make([]byte, 0)
+	a.nextToken()
 }

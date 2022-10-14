@@ -5,6 +5,11 @@ import (
 )
 
 const (
+	ImmdMin = 0b000000
+	ImmdMax = 0b111111
+)
+
+const (
 	SymbolNone = iota
 	SymbolReg
 	SymbolInstr
@@ -60,7 +65,7 @@ var Symbols = map[string]Symbol{
 	"nor":  {"nor", SymbolInstr, InstrDef{InstrRKind, NorOp}},
 	"or":   {"or", SymbolInstr, InstrDef{InstrRKind, OrOp}},
 	"slt":  {"slw", SymbolInstr, InstrDef{InstrRKind, SltOp}},
-	"sw":   {"sw", SymbolInstr, InstrDef{InstrRKind, SwOp}},
+	"sw":   {"sw", SymbolInstr, InstrDef{InstrIKind, SwOp}},
 	"sub":  {"sub", SymbolInstr, InstrDef{InstrRKind, SubOp}},
 
 	// Cmds
@@ -169,6 +174,15 @@ func (a *Assembler) parseConst() uint16 {
 	return uint16(val)
 }
 
+func (a *Assembler) parseImmd() uint16 {
+	val, isUint16 := a.token.val.(int)
+	if !isUint16 {
+		return 0
+	}
+	a.expectToken(TokenNumber)
+	return uint16(val)
+}
+
 func (a *Assembler) parseAddress() uint16 {
 	return 0
 }
@@ -190,6 +204,9 @@ func (a *Assembler) encodeInstruction(instr Instruction) uint16 {
 	switch instr.op {
 	case LwOp:
 		op = 3 << 12
+		return op | rs | rt | immd
+	case SwOp:
+		op = 0xA << 12
 		return op | rs | rt | immd
 	case AddOp:
 		op = 0 << 12
@@ -226,7 +243,10 @@ func (a *Assembler) parseInstruction(sym Symbol) {
 	case InstrIKind:
 		instr.rt = a.parseRegister()
 		a.expectToken(TokenComma)
-		instr.immd = a.parseConst()
+		instr.immd = a.parseImmd()
+		if instr.immd < ImmdMin || instr.immd > ImmdMax {
+			a.lexError("Immediate is out of range")
+		}
 		a.expectToken(TokenLeftParen)
 		instr.rs = a.parseRegister()
 		a.expectToken(TokenRightParen)
@@ -252,6 +272,12 @@ func (a *Assembler) parseLine() {
 	a.parseNewlines()
 }
 
+func (a *Assembler) parseLines() {
+	for !a.isToken(TokenNone) {
+		a.parseLine()
+	}
+}
+
 func (a *Assembler) parseFile() {
 	for a.token.kind != TokenNone {
 		a.parseLine()
@@ -268,6 +294,14 @@ func (a *Assembler) getCodeSectionStr() string {
 	var buf string
 	for i := 0; i < len(a.codeSection); i += 2 {
 		buf += fmt.Sprintf("%08b%08b\n", a.codeSection[i], a.codeSection[i+1])
+	}
+	return buf
+}
+
+func (a *Assembler) getDebugStr() string {
+	var buf string
+	for i := 0; i < len(a.codeSection); i += 2 {
+		buf += fmt.Sprintf("0x%04x -> %08b%08b\n", a.address, a.codeSection[i], a.codeSection[i+1])
 	}
 	return buf
 }
