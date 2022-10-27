@@ -18,8 +18,9 @@ const (
 
 type SymbolKind uint8
 
+// This is based on the instruction specific syntax and not on the architecture specification
 const (
-	InstrRKind = iota
+	InstrRegisterKind = iota // <op> <reg>, <reg>, <reg>
 	InstrIKind
 	InstrJKind
 )
@@ -55,18 +56,18 @@ type Symbol struct {
 
 var Symbols = map[string]Symbol{
 	// Instructions
-	"add":  {"add", SymbolInstr, InstrDef{InstrRKind, AddOp}},
+	"add":  {"add", SymbolInstr, InstrDef{InstrRegisterKind, AddOp}},
 	"addi": {"addi", SymbolInstr, InstrDef{InstrIKind, AddiOp}},
-	"and":  {"and", SymbolInstr, InstrDef{InstrRKind, AndOp}},
+	"and":  {"and", SymbolInstr, InstrDef{InstrRegisterKind, AndOp}},
 	"beq":  {"beq", SymbolInstr, InstrDef{InstrIKind, BeqOp}},
 	"j":    {"j", SymbolInstr, InstrDef{InstrJKind, JOp}},
 	"lw":   {"lw", SymbolInstr, InstrDef{InstrIKind, LwOp}},
-	"nand": {"nand", SymbolInstr, InstrDef{InstrRKind, NandOp}},
-	"nor":  {"nor", SymbolInstr, InstrDef{InstrRKind, NorOp}},
-	"or":   {"or", SymbolInstr, InstrDef{InstrRKind, OrOp}},
-	"slt":  {"slw", SymbolInstr, InstrDef{InstrRKind, SltOp}},
+	"nand": {"nand", SymbolInstr, InstrDef{InstrRegisterKind, NandOp}},
+	"nor":  {"nor", SymbolInstr, InstrDef{InstrRegisterKind, NorOp}},
+	"or":   {"or", SymbolInstr, InstrDef{InstrRegisterKind, OrOp}},
+	"slt":  {"slw", SymbolInstr, InstrDef{InstrRegisterKind, SltOp}},
 	"sw":   {"sw", SymbolInstr, InstrDef{InstrIKind, SwOp}},
-	"sub":  {"sub", SymbolInstr, InstrDef{InstrRKind, SubOp}},
+	"sub":  {"sub", SymbolInstr, InstrDef{InstrRegisterKind, SubOp}},
 
 	// Cmds
 	".uint8":  {".uint8", SymbolCmd, cmdUint8},
@@ -209,8 +210,22 @@ func (a *Assembler) encodeInstruction(instr Instruction) uint16 {
 		op = 0xA << 12
 		return op | rs | rt | immd
 	case AddOp:
-		op = 0 << 12
 		funct = 0
+		return op | rs | rt | rd | funct
+	case NandOp:
+		funct = 1
+		return op | rs | rt | rd | funct
+	case NorOp:
+		funct = 7
+		return op | rs | rt | rd | funct
+	case OrOp:
+		funct = 5
+		return op | rs | rt | rd | funct
+	case SltOp:
+		funct = 2
+		return op | rs | rt | rd | funct
+	case SubOp:
+		funct = 3
 		return op | rs | rt | rd | funct
 	}
 	return 0
@@ -234,7 +249,7 @@ func (a *Assembler) parseInstruction(sym Symbol) {
 	instr.op = instrDef.op
 
 	switch instrDef.kind {
-	case InstrRKind:
+	case InstrRegisterKind:
 		instr.rd = a.parseRegister()
 		a.expectToken(TokenComma)
 		instr.rs = a.parseRegister()
