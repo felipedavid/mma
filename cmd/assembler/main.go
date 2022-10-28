@@ -8,13 +8,8 @@ import (
 	"strings"
 )
 
-func main() {
-	//interactiveMode := *flag.Bool("i", false, "Interactive mode")
-	flag.Parse()
-
-	asm := newAssembler("<string>", []byte("sw $4, 4($1)"))
-	asm.parseLines()
-
+func prompt() {
+	asm := newAssembler("<string>", nil)
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		fmt.Printf(">>> ")
@@ -25,8 +20,32 @@ func main() {
 			continue
 		}
 		line = strings.Replace(line, "\n", "", -1)
-		asm.setSource([]byte(line))
-		asm.parseLines()
-		fmt.Println(asm.getDebugStr())
+		asm.resetState([]byte(line))
+		asm.parseLine()
+		if !asm.hasError {
+			fmt.Println(asm.getDebugStr())
+		}
+	}
+}
+
+func compile(fileName string) {
+	source, err := os.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	asm := newAssembler(fileName, source)
+	asm.parseLines()
+}
+
+func main() {
+	interactiveMode := *flag.Bool("i", true, "Interactive mode")
+	flag.Parse()
+
+	if interactiveMode {
+		prompt()
+	} else {
+		fileName := os.Args[1]
+		compile(fileName)
 	}
 }

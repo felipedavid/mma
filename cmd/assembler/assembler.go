@@ -16,6 +16,8 @@ type Assembler struct {
 
 	dataSection []byte
 	codeSection []byte
+
+	hasError bool
 }
 
 func newAssembler(filename string, source []byte) *Assembler {
@@ -33,11 +35,12 @@ func newAssembler(filename string, source []byte) *Assembler {
 	return asm
 }
 
-func (a *Assembler) setSource(src []byte) {
+func (a *Assembler) resetState(src []byte) {
 	a.source = src
 	a.start = 0
 	a.current = 0
 	a.line = 1
 	a.codeSection = make([]byte, 0)
+	a.hasError = false
 	a.nextToken()
 }

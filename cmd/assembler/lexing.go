@@ -312,6 +312,7 @@ func (a *Assembler) scanNumber() {
 }
 
 func (a *Assembler) lexError(fmtString string, val ...any) {
+	a.hasError = true
 	errMsg := fmt.Sprintf(fmtString, val...)
 	fmt.Printf("Lexing error on line %d: %s\n", a.line, errMsg)
 }
