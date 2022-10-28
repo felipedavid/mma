@@ -7,6 +7,8 @@ import (
 const (
 	ImmdMin = 0b000000
 	ImmdMax = 0b111111
+	AddrMin = 0b0000_0000_0000
+	AddrMax = 0b1111_1111_1111
 )
 
 const (
@@ -20,9 +22,11 @@ type SymbolKind uint8
 
 // This is based on the instruction specific syntax and not on the architecture specification
 const (
-	InstrRegisterKind = iota // <op> <reg>, <reg>, <reg>
-	InstrIKind
-	InstrJKind
+	InstrNoneKind     = iota
+	InstrRegisterKind // <op> <reg>, <reg>, <reg>
+	InstrMemoryKind   // <op> <reg>, <int>(<reg>)
+	InstrImmKind      // <op> <reg>, <reg>, <int>
+	InstrJumpKind
 )
 
 type InstrKind uint8
@@ -57,16 +61,16 @@ type Symbol struct {
 var Symbols = map[string]Symbol{
 	// Instructions
 	"add":  {"add", SymbolInstr, InstrDef{InstrRegisterKind, AddOp}},
-	"addi": {"addi", SymbolInstr, InstrDef{InstrIKind, AddiOp}},
+	"addi": {"addi", SymbolInstr, InstrDef{InstrImmKind, AddiOp}},
 	"and":  {"and", SymbolInstr, InstrDef{InstrRegisterKind, AndOp}},
-	"beq":  {"beq", SymbolInstr, InstrDef{InstrIKind, BeqOp}},
-	"j":    {"j", SymbolInstr, InstrDef{InstrJKind, JOp}},
-	"lw":   {"lw", SymbolInstr, InstrDef{InstrIKind, LwOp}},
+	"beq":  {"beq", SymbolInstr, InstrDef{InstrImmKind, BeqOp}},
+	"j":    {"j", SymbolInstr, InstrDef{InstrJumpKind, JOp}},
+	"lw":   {"lw", SymbolInstr, InstrDef{InstrMemoryKind, LwOp}},
 	"nand": {"nand", SymbolInstr, InstrDef{InstrRegisterKind, NandOp}},
 	"nor":  {"nor", SymbolInstr, InstrDef{InstrRegisterKind, NorOp}},
 	"or":   {"or", SymbolInstr, InstrDef{InstrRegisterKind, OrOp}},
 	"slt":  {"slw", SymbolInstr, InstrDef{InstrRegisterKind, SltOp}},
-	"sw":   {"sw", SymbolInstr, InstrDef{InstrIKind, SwOp}},
+	"sw":   {"sw", SymbolInstr, InstrDef{InstrMemoryKind, SwOp}},
 	"sub":  {"sub", SymbolInstr, InstrDef{InstrRegisterKind, SubOp}},
 
 	// Cmds
@@ -181,11 +185,22 @@ func (a *Assembler) parseImmd() uint16 {
 		return 0
 	}
 	a.expectToken(TokenNumber)
+	if val < ImmdMin || val > ImmdMax {
+		a.lexError("Immediate '%d' is out of range", val)
+	}
 	return uint16(val)
 }
 
 func (a *Assembler) parseAddress() uint16 {
-	return 0
+	val, isUint16 := a.token.val.(int)
+	if !isUint16 {
+		return 0
+	}
+	a.expectToken(TokenNumber)
+	if val < AddrMin || val > AddrMax {
+		a.lexError("Address '%d' is out of range", val)
+	}
+	return uint16(val)
 }
 
 type Instruction struct {
@@ -197,21 +212,30 @@ func (a *Assembler) encodeInstruction(instr Instruction) uint16 {
 	rt := bits(instr.rt, 0, 3) << 6
 	rd := bits(instr.rd, 0, 3) << 3
 	immd := bits(instr.immd, 0, 6)
-	//addr := bits(instr.immd, 0, 12)
+	addr := bits(instr.addr, 0, 12)
 
 	var op uint16
 	var funct uint16
 
 	switch instr.op {
-	case LwOp:
-		op = 3 << 12
-		return op | rs | rt | immd
-	case SwOp:
-		op = 0xA << 12
-		return op | rs | rt | immd
 	case AddOp:
 		funct = 0
 		return op | rs | rt | rd | funct
+	case AddiOp:
+		op = 0x8 << 12
+		return op | rs | rt
+	case AndOp:
+		funct = 4
+		return op | rs | rt | rd | funct
+	case BeqOp:
+		op = 4 << 12
+		return op | rs | rt | immd
+	case JOp:
+		op = 2 << 12
+		return op | addr
+	case LwOp:
+		op = 3 << 12
+		return op | rs | rt | immd
 	case NandOp:
 		funct = 1
 		return op | rs | rt | rd | funct
@@ -224,6 +248,9 @@ func (a *Assembler) encodeInstruction(instr Instruction) uint16 {
 	case SltOp:
 		funct = 2
 		return op | rs | rt | rd | funct
+	case SwOp:
+		op = 0xA << 12
+		return op | rs | rt | immd
 	case SubOp:
 		funct = 3
 		return op | rs | rt | rd | funct
@@ -255,24 +282,29 @@ func (a *Assembler) parseInstruction(sym Symbol) {
 		instr.rs = a.parseRegister()
 		a.expectToken(TokenComma)
 		instr.rt = a.parseRegister()
-	case InstrIKind:
+	case InstrMemoryKind:
 		instr.rt = a.parseRegister()
 		a.expectToken(TokenComma)
 		instr.immd = a.parseImmd()
-		if instr.immd < ImmdMin || instr.immd > ImmdMax {
-			a.lexError("Immediate is out of range")
-		}
 		a.expectToken(TokenLeftParen)
 		instr.rs = a.parseRegister()
 		a.expectToken(TokenRightParen)
-	case InstrJKind:
+	case InstrImmKind:
+		instr.rt = a.parseRegister()
+		a.expectToken(TokenComma)
+		instr.rs = a.parseRegister()
+		a.expectToken(TokenComma)
+		instr.immd = a.parseImmd()
+	case InstrJumpKind:
 		instr.addr = a.parseAddress()
 	default:
 		a.parserError("Could not parse instruction. The instruction class does not exist.")
 		return
 	}
 
-	a.assembleInstruction(a.encodeInstruction(instr))
+	if !a.hasError {
+		a.assembleInstruction(a.encodeInstruction(instr))
+	}
 }
 
 func (a *Assembler) parseLine() {
@@ -301,6 +333,7 @@ func (a *Assembler) parseFile() {
 }
 
 func (a *Assembler) parserError(fmtString string, val ...any) {
+	a.hasError = true
 	errorMsg := fmt.Sprintf(fmtString, val...)
 	fmt.Printf("Parsing error at line %d: %s\n", a.line, errorMsg)
 }
