@@ -17,7 +17,7 @@ type TokenKind int
 
 type Token struct {
 	kind   TokenKind
-	lexeme []byte
+	lexeme string
 	line   int
 }
 
@@ -37,7 +37,7 @@ func newLexer(source []byte) *Lexer {
 }
 
 func (l *Lexer) newToken(kind TokenKind, startOffset int) Token {
-	return Token{kind: kind, lexeme: l.source[startOffset:l.offset]}
+	return Token{kind: kind, lexeme: string(l.source[startOffset:l.offset])}
 }
 
 func (l *Lexer) peek() byte {
