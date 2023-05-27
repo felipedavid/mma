@@ -59,7 +59,7 @@ typedef struct {
 	union {
 		int int_value;
 		const char *name;
-		int register_val;
+		u16 register_id;
 	};
 } Token;
 
@@ -175,7 +175,7 @@ BEGIN:
 				syntax_error("register '%.*s' does not exist", (int)(stream - token.start), token.start);
 			}
 			token.kind = TOKEN_REGISTER;
-			token.register_val = val;
+			token.register_id = val;
 		} else {
 			syntax_error("invalid register");
 		}
@@ -201,7 +201,7 @@ void print_token(Token token) {
 		printf("val: %d", token.int_value);
 		break;
 	case TOKEN_REGISTER:
-		printf("val: %d", token.register_val);
+		printf("val: %d", token.register_id);
 		break;
 	default:
 		break;
