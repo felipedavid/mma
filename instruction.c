@@ -174,7 +174,6 @@ Instruction *new_j_instruction(const char *instr_name, u16 addr) {
 	return instr;
 }
 
-
 u16 encode_r_instruction(Instruction *instr) {
 	u16 val = 0;
 	val |= (instr->r.rd << 3);

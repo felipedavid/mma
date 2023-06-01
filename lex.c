@@ -219,6 +219,9 @@ bool is_token(TokenKind kind) {
 	return token.kind == kind;
 }
 
+bool is_name(const char *name) {
+	return token.name == name;
+}
 
 bool match_token(TokenKind kind) {
 	if (token.kind == kind) {

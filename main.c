@@ -9,6 +9,7 @@
 #include "common.c"
 #include "lex.c"
 #include "instruction.c"
+#include "parser.c"
 
 void assemble(const char *source) {
 	init_stream(source);
@@ -53,13 +54,12 @@ void lex_test() {
 	expect_token(TOKEN_IDENTIFIER);
 }
 
-Instruction *parse_instr() {
-	return NULL;
-}
+void print_instr(Instruction *instr);
 
 void parse_test() {
-	init_stream("add $1, $2, $3\nsw $3, addr");
-	parse_instr();
+	init_stream("add $1, $2, $3\nsub $3, $2, $1");
+	print_instr(parse_instr());
+	print_instr(parse_instr());
 }
 
 void print_instr(Instruction *instr) {
@@ -93,14 +93,27 @@ void instr_test() {
 	}
 }
 
+void encode_test() {
+	Instruction *instructions[] = {
+		new_i_instruction(lw_keyword, R1, R2, 0),
+		new_i_instruction(lw_keyword, R1, R3, 2),
+		new_r_instruction(add_keyword, R2, R3, R4),
+		new_i_instruction(sw_keyword, R1, R4, 4),
+		NULL,
+	};
+	for (Instruction **instr = instructions; *instr != NULL; instr++) {
+	u16 bin = encode_instruction(*instr);
+		printf("%04x\n", bin);
+	}
+}
+
 int main(int argc, char **argv) {
+	init_keywords();
+	parse_test();
+
 	if (argc != 2) {
 		fatal("Usage: %s <source_file>\n", argv[0]);
 	}
-
-	init_keywords();
-	//assemble_file(argv[1]);
-	instr_test();
 	
 	return 0;
 }
