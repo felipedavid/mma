@@ -30,17 +30,17 @@ Instruction *parse_instr() {
 		expect_token(TOKEN_KEYWORD);
 		rs = parse_register();
 		expect_token(',');
-		rt = parse_register();
-		expect_token(',');
 		rd = parse_register();
+		expect_token(',');
+		rt = parse_register();
 		instr = new_r_instruction(instr_name, rs, rt, rd);
 	} else if (is_name(addi_keyword) || is_name(beq_keyword) || is_name(lw_keyword) || is_name(sw_keyword)) {
 		u16 immd = 0;
 		expect_token(TOKEN_KEYWORD);
-		rs = parse_register();
+		rt = parse_register();
 		expect_token(',');
 		if (is_token(TOKEN_REGISTER)) {
-			rt = parse_register();
+			rs = parse_register();
 			expect_token(',');
 			immd = token.int_value;
 			expect_token(TOKEN_NUMBER);
@@ -48,7 +48,7 @@ Instruction *parse_instr() {
 			immd = token.int_value;
 			next_token();
 			expect_token('(');
-			rt = parse_register();
+			rs = parse_register();
 			expect_token(')');
 		}
 		instr = new_i_instruction(instr_name, rs, rt, immd);
@@ -64,10 +64,12 @@ Instruction *parse_instr() {
 	return instr;
 }
 
-void parse_line() {
+bool parse_line() {
 	switch (token.kind) {
+	case '\0':
+		return false;
 	case TOKEN_KEYWORD:
-		parse_instr();
+		buf_push(instructions, parse_instr());
 		break;
 	case TOKEN_IDENTIFIER_COLON:
 		fatal("Not implemented yet!");
@@ -77,5 +79,7 @@ void parse_line() {
 		break;
 	default:
 		parsing_error("a %s should not appear the begging of a line", token_kind_str(token.kind));
+		return false;
 	}
+	return true;
 }

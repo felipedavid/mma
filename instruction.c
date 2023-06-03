@@ -81,6 +81,8 @@ typedef struct {
 	};
 } Instruction;
 
+Instruction **instructions;
+
 // This functions should be replaced by a hash table.. But I'm too lazy to do it right now
 InstructionMod get_instr_mod(InstructionKind kind, const char *instr_name) {
 	InstructionMod mod = MOD_NONE;
