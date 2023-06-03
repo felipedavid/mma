@@ -249,3 +249,17 @@ void syntax_error(const char *fmt, ...) {
 	printf("\n");
 }
 
+void lex_test() {
+    init_stream("add $1, $2, $3\nsw $3, addr");
+    expect_token(TOKEN_IDENTIFIER);
+    expect_token(TOKEN_REGISTER);
+    expect_token(',');
+    expect_token(TOKEN_REGISTER);
+    expect_token(',');
+    expect_token(TOKEN_REGISTER);
+    expect_token(TOKEN_IDENTIFIER);
+    expect_token(TOKEN_REGISTER);
+    expect_token(',');
+    expect_token(TOKEN_IDENTIFIER);
+}
+

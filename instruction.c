@@ -261,3 +261,34 @@ u16 encode_instruction(Instruction *instr) {
 		instr_dec_error("Invalid instruction type");
 	}
 }
+
+void print_instr(Instruction *instr) {
+    switch (instr->kind) {
+        case R_INSTRUCTION:
+            printf("r-instruction, mod: %d, rs: %d, rt: %d, rd: %d",
+                   instr->mod, instr->r.rs, instr->r.rt, instr->r.rd);
+            break;
+        case I_INSTRUCTION:
+            printf("i-instruction, mod: %d, rs: %d, rt: %d, immd: %d",
+                   instr->mod, instr->i.rs, instr->i.rt, instr->i.immd);
+            break;
+        case J_INSTRUCTION:
+            printf("j-instruction, mod: %d, addr: 0x%x",
+                   instr->mod, instr->j.address);
+            break;
+    }
+    printf("\n");
+}
+
+void instr_test() {
+    token.line = 100;
+    Instruction *instructions[] = {
+            new_r_instruction(add_keyword, R1, R2, R3),
+            new_i_instruction(addi_keyword, R1, R2, 65),
+            new_j_instruction(j_keyword, 0x100),
+            NULL,
+    };
+    for (Instruction **instr = instructions; *instr != NULL; instr++) {
+        print_instr(*instr);
+    }
+}

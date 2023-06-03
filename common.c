@@ -11,6 +11,15 @@ void fatal(const char *fmt, ...) {
 	exit(1);
 }
 
+void *xcalloc(size_t size) {
+    void *ptr = calloc(1, size);
+    if (ptr == NULL) {
+        fatal("xcalloc failed");
+    }
+    return ptr;
+
+}
+
 void *xmalloc(size_t size) {
 	void *ptr = malloc(size);
 	if (ptr == NULL) {
@@ -51,9 +60,7 @@ typedef struct {
 	char content[0];
 } Buf_Header;
 
-#define BUF(x) x
 #define buf__header(b) ((b) ? (Buf_Header *)((char*)(b) - offsetof(Buf_Header, content)) : 0)
-#define buf__fits(b, n)
 #define buf__make_fit(b, n) (((buf_len(b)+n) < buf_cap(b)) ? 0 : ((b) = buf__grow((b), (buf_len(b)+n), sizeof(*b))))
 
 #define buf_len(b) ((b) ? buf__header(b)->len : 0)
