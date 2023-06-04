@@ -7,23 +7,19 @@
 #include <string.h>
 #include <stdarg.h>
 
-
-#define STB_DS_IMPLEMENTATION
-#include "../libs/stb_ds.h" // @temporary: write own implementation of a hash table
-
-#include "common.c"
-#include "lexer.c"
-#include "instruction.c"
-#include "parser.c"
-
 typedef struct {
-    bool hadError;
+    bool had_error;
 
     char *instr_img;
     char *data_img;
 } Assembler;
 
 Assembler assembler;
+
+#include "common.c"
+#include "lexer.c"
+#include "instruction.c"
+#include "parser.c"
 
 void parse_test() {
     init_stream("add $1, $2, $3\nsub $3, $2, $1\naddi $1, $2, 23\nj 123\n");
@@ -42,6 +38,8 @@ void run_tests() {
 void assemble(const char *source) {
 	init_stream(source);
     while (parse_line());
+
+    fix_unresolved_symbols();
 
     print_symbols();
 
@@ -81,7 +79,7 @@ void assemble_file(char *file_name) {
 
 	assemble(source);
 
-    if (assembler.hadError) {
+    if (assembler.had_error) {
         return;
     }
 

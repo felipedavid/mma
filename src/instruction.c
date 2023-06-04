@@ -5,6 +5,8 @@ void instr_dec_error(const char *fmt, ...) {
 	vprintf(fmt, args);
 	va_end(args);
 	printf("\n");
+
+    assembler.had_error = true;
 }
 
 bool assert_bit_size(u16 value, int n_bits) {
@@ -80,10 +82,13 @@ typedef struct {
     // to these instructions and try to fix the addressing having the full symbol table
     bool needs_fix_label; 
 
+    int line;
+
 	union {
 		RFormat r;
 		IFormat i;
 		JFormat j;
+        const char *label_to_resolve;
 	};
 } Instruction;
 
