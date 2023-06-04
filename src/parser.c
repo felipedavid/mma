@@ -70,9 +70,6 @@ Instruction *parse_instr() {
 	return instr;
 }
 
-// Key: Labels (interned), Value: index into instructions array
-struct {char *key; int value;} *symbols;
-
 bool parse_line() {
 	switch (token.kind) {
 	case '\0':
@@ -81,7 +78,7 @@ bool parse_line() {
 		buf_push(instructions, parse_instr());
 		break;
 	case TOKEN_IDENTIFIER_COLON:
-        shput(symbols, (char*)token.name, buf_len(instructions));
+        next_token();
         parse_line();
 		break;
 	case TOKEN_DIRECTIVE:

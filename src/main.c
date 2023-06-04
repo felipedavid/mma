@@ -1,6 +1,3 @@
-#define STB_DS_IMPLEMENTATION
-#include "../libs/stb_ds.h" // @temporary: write own implementation of a hash table
-                            //
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -9,6 +6,10 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdarg.h>
+
+
+#define STB_DS_IMPLEMENTATION
+#include "../libs/stb_ds.h" // @temporary: write own implementation of a hash table
 
 #include "common.c"
 #include "lexer.c"
@@ -41,6 +42,8 @@ void run_tests() {
 void assemble(const char *source) {
 	init_stream(source);
     while (parse_line());
+
+    print_symbols();
 
     enum { LINE_CHAR_LEN = 18 };
     char instr_line[LINE_CHAR_LEN];
