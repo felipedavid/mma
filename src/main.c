@@ -43,10 +43,10 @@ void assemble(const char *source) {
 
     print_symbols();
 
-    enum { LINE_CHAR_LEN = 18 };
+    enum { LINE_CHAR_LEN = 6 };
     char instr_line[LINE_CHAR_LEN];
     for (Instruction **i = instructions; i != buf_end(instructions); i++) {
-        sprintf(instr_line, "%016b\n", encode_instruction(*i));     
+        sprintf(instr_line, "%04x\n", encode_instruction(*i));     
 
         // This is the only place where I use stretchy buffers for characters,
         // so I did not see the necessity of a buf_push_all macro.
@@ -101,11 +101,13 @@ void assemble_file(char *file_name) {
             exit(1);
         }
 
-        size_t written = fwrite(instr_img, buf_len(instr_img), 1, instr_img_f);
+        size_t written = fwrite("v2.0 raw\n", 9, 1, instr_img_f); 
         if (!written) {
             fprintf(stderr, "Unable to write to '%s'.\n", file_name);
             exit(1);
         }
+
+        fwrite(instr_img, buf_len(instr_img), 1, instr_img_f);
 
         fclose(instr_img_f);
     }
@@ -137,6 +139,7 @@ int main(int argc, char **argv) {
 	}
 
 	init_keywords();
+	init_directives();
     assemble_file(argv[1]);
 	
 	return 0;
