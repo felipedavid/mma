@@ -107,6 +107,21 @@ void fix_unresolved_symbols() {
     }
 }
 
+typedef enum {
+    PARSING_CODE_SECTION,
+    PARSING_DATA_SECTION,
+} ParsingMode;
+
+ParsingMode parser_mode;
+
+const char *text_directive;
+const char *data_directive;
+
+void init_directives() {
+    text_directive = str_intern("text");
+    data_directive = str_intern("data");
+}
+
 bool parse_line() {
 	switch (token.kind) {
 	case '\0':
@@ -120,7 +135,17 @@ bool parse_line() {
         parse_line();
 		break;
 	case TOKEN_DIRECTIVE:
-		fatal("Not implemented yet!");
+        assert(text_directive);
+        assert(data_directive);
+
+        if (token.name == text_directive) {
+            parser_mode = PARSING_CODE_SECTION;
+        } else if (token.name == data_directive) {
+            parser_mode = PARSING_DATA_SECTION;
+        } else {
+            parsing_error("there is no directive called '.%s'. Did you mean .text or .data", token.name);
+        }
+        next_token();
 		break;
 	default:
 		parsing_error("a %s should not appear the begging of a line", token_kind_str(token.kind));

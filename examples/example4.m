@@ -1,8 +1,7 @@
-lw $1, n1
-lw $2, n2
-add $3, $1, $2
-beq $1, $2, 0x3
-sub $3, $1, $2
-sw $3, 4($0)
-j here
-sw $3, 4($0)
+.text
+    lw $2, 0($1)
+start:
+    lw $3, 2($1)
+    j start
+    add $4, $2, $3
+    sw $4, 4($1)

@@ -66,6 +66,7 @@ typedef struct {
 Token token;
 const char *stream;
 
+
 const char *token_kind_str(TokenKind kind) {
 	static char buf[256]; // OBS: will be overwritten by next call
 	switch (kind) {
@@ -92,6 +93,8 @@ const char *token_kind_str(TokenKind kind) {
 	}
 	return buf;
 }
+
+bool is_token(TokenKind kind);
 
 void next_token() {
 BEGIN:
@@ -154,7 +157,12 @@ BEGIN:
 		}
 
 		token.kind = TOKEN_DIRECTIVE;
-		token.name = str_intern_range(token.start+1, stream);
+        if (*stream == ':') {
+            stream++;
+            token.name = str_intern_range(token.start+1, stream-1);
+        } else {
+            token.name = str_intern_range(token.start+1, stream);
+        }
 	} break;
 	case '$': {
 		stream++;
